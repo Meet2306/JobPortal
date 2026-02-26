@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
@@ -98,6 +99,14 @@ function App() {
       </Router>
     </AuthContext.Provider>
   );
+=======
+import Dashboard from './components/Dashboard'
+
+function App() {
+  return (
+    <Dashboard />
+  )
+>>>>>>> dbe18fdf0e62e3af32d2144ba06a63a06328a542
 }
 
 export default App;
