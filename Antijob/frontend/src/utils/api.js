@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL: 'job-portal-gamma-liard.vercel.app',
     withCredentials: true, // important for cookies
 });
 
