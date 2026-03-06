@@ -29,19 +29,10 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'placements-node-secret',
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production', // Set to true if using https
-        httpOnly: true,
-        maxAge: 3600000, // 1 hour
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
-    }
+app.use(cors({
+    origin: 'http://localhost:5173', // Vite default port
+    credentials: true
 }));
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
