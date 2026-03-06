@@ -1,0 +1,70 @@
+/* Tailwind utilities — auth page only (preflight is OFF) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Floating label input ── */
+.auth-input-field {
+  display: block;
+  width: 100%;
+  padding: 24px 16px 8px 16px;
+  background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-sizing: border-box;
+}
+.auth-input-field::placeholder {
+  color: transparent;
+}
+.auth-input-field:focus {
+  border-color: #1a2b4a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(26, 43, 74, 0.08);
+}
+
+.auth-label {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  font-weight: 400;
+  color: #94a3b8;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Inter', sans-serif;
+}
+.auth-input-field:focus ~ .auth-label,
+.auth-input-field:not(:placeholder-shown) ~ .auth-label {
+  top: 10px;
+  transform: translateY(0);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(26, 43, 74, 0.75);
+}
+
+/* ── Step progress dots ── */
+.step-dot {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  border: 2px solid;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+.step-dot.done    { background: #1a2b4a; border-color: #1a2b4a; color: white; }
+.step-dot.active  { background: white;   border-color: #1a2b4a; color: #1a2b4a; box-shadow: 0 0 0 4px rgba(26,43,74,0.1); }
+.step-dot.pending { background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; }
+
+.step-line { flex: 1; height: 2px; transition: background 0.5s ease; }
+.step-line.done    { background: #1a2b4a; }
+.step-line.pending { background: #e2e8f0; }

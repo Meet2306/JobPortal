@@ -18,7 +18,14 @@ const userSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false // Admin verifies students and companies
-  }
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: String,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

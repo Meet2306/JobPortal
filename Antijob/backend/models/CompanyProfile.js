@@ -9,7 +9,9 @@ const companyProfileSchema = new mongoose.Schema({
     hrContactEmail: { type: String },
     hrContactNumber: { type: String },
     description: { type: String },
-    isApproved: { type: Boolean, default: false } // Admin approval
+    isApproved: { type: Boolean, default: false }, // Admin approval
+    isLocked: { type: Boolean, default: false },
+    editRequestStatus: { type: String, enum: ['None', 'Pending', 'Approved'], default: 'None' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('CompanyProfile', companyProfileSchema);

@@ -1,66 +1,237 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { UserPlus, Mail, Lock } from 'lucide-react';
+import api from '../utils/api';
+import {
+    UserPlus, Mail, Lock, User, Phone, GraduationCap,
+    Building2, Globe, RefreshCw, AlertCircle, CheckCircle, ChevronRight
+} from 'lucide-react';
 
 const Register = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [role, setRole] = useState('student');
+    const [formData, setFormData] = useState({
+        email: '', password: '', role: 'student',
+        name: '', contactNumber: '',
+        companyName: '', industry: '', websiteUrl: '',
+        hrContactName: '', hrContactEmail: '', hrContactNumber: '', description: '',
+        captcha: ''
+    });
+
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [captchaSvg, setCaptchaSvg] = useState('');
+    const [captchaLoading, setCaptchaLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const { register } = useContext(AuthContext);
     const navigate = useNavigate();
 
-    const handleRegister = async (e) => {
-        e.preventDefault();
+    const refreshCaptcha = async () => {
+        setCaptchaLoading(true);
         try {
-            await register({ email, password, role });
-            setSuccess('Registration successful! Please login.');
-            setError('');
-            setTimeout(() => navigate('/login'), 2000);
-        } catch (err) {
-            setError(err.response?.data?.error || 'Registration failed');
-            setSuccess('');
+            const res = await api.get('/auth/captcha');
+            setCaptchaSvg(res.data);
+            setFormData(prev => ({ ...prev, captcha: '' }));
+            setError(''); 
+        } catch (err) { 
+            console.error('Captcha fetch error:', err);
+            setError('Could not connect to security service. Please refresh.');
+        } finally {
+            setCaptchaLoading(false);
         }
     };
 
+    useEffect(() => { refreshCaptcha(); }, []);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleRegister = async (e) => {
+        e.preventDefault();
+        setError(''); setSuccess(''); setLoading(true);
+        try {
+            await register(formData);
+            setSuccess('Account created! Verification email sent. Redirecting...');
+            setTimeout(() => navigate('/login'), 2500);
+        } catch (err) {
+            refreshCaptcha();
+            setError(err.response?.data?.error || 'Registration failed. Verify all fields.');
+        } finally { setLoading(false); }
+    };
+
     return (
-        <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-            <div className="glass-panel animate-fade" style={{ width: '100%', maxWidth: '400px' }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                    <UserPlus size={24} color="var(--primary)" /> Join Portal
-                </h2>
-                {error && <p className="error-text" style={{ textAlign: 'center', marginBottom: '1rem' }}>{error}</p>}
-                {success && <p className="success-text" style={{ textAlign: 'center', marginBottom: '1rem' }}>{success}</p>}
+        <div className="auth-page">
+            <div className="auth-card auth-card-wide animate-scale-in">
+                {/* Header */}
+                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <div style={{
+                        width: '56px', height: '56px',
+                        background: 'var(--primary)', borderRadius: '14px',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        marginBottom: '20px',
+                        boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)'
+                    }}>
+                        <UserPlus size={26} color="white" />
+                    </div>
+                    <h1 style={{ fontSize: '1.75rem', marginBottom: '8px' }}>Join PlacePortal</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.925rem' }}>
+                        Create your account to start your journey
+                    </p>
+                </div>
+
+                {/* Alerts */}
+                {error && (
+                    <div className="error-alert animate-fade-in">
+                        <AlertCircle size={16} style={{ flexShrink: 0 }} /> <span>{error}</span>
+                    </div>
+                )}
+                {success && (
+                    <div className="success-alert animate-fade-in">
+                        <CheckCircle size={16} style={{ flexShrink: 0 }} /> <span>{success}</span>
+                    </div>
+                )}
+
                 <form onSubmit={handleRegister}>
-                    <div className="form-group">
-                        <label>Registration Role</label>
-                        <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
-                            <option value="student">Student</option>
-                            <option value="company">Company</option>
-                        </select>
-                    </div>
-                    <div className="form-group">
-                        <label>Email Address</label>
-                        <div style={{ position: 'relative' }}>
-                            <input type="email" required className="form-control" style={{ paddingLeft: '40px' }} value={email} onChange={(e) => setEmail(e.target.value)} />
-                            <Mail size={18} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--text-muted)' }} />
+                    {/* Role Picker */}
+                    <div style={{ marginBottom: '28px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            {[
+                                { value: 'student', icon: GraduationCap, label: 'Student' },
+                                { value: 'company', icon: Building2, label: 'Recruiter' }
+                            ].map(opt => (
+                                <button
+                                    key={opt.value} type="button"
+                                    onClick={() => setFormData({ ...formData, role: opt.value })}
+                                    style={{
+                                        padding: '14px',
+                                        borderRadius: '12px',
+                                        border: `2px solid ${formData.role === opt.value ? 'var(--primary)' : 'var(--border)'}`,
+                                        background: formData.role === opt.value ? 'var(--primary-soft)' : 'white',
+                                        color: formData.role === opt.value ? 'var(--primary)' : 'var(--text-muted)',
+                                        cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                                        fontWeight: '700', fontSize: '0.875rem',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    }}
+                                >
+                                    <opt.icon size={18} />
+                                    {opt.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                    <div className="form-group">
-                        <label>Password</label>
-                        <div style={{ position: 'relative' }}>
-                            <input type="password" required className="form-control" style={{ paddingLeft: '40px' }} value={password} onChange={(e) => setPassword(e.target.value)} />
-                            <Lock size={18} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--text-muted)' }} />
+
+                    <div className="divider"><span>Account Credentials</span></div>
+
+                    <div className="grid-2" style={{ gap: '16px', marginBottom: '16px' }}>
+                        <div className="form-group">
+                            <label className="form-label">Email Address</label>
+                            <div className="input-with-icon">
+                                <input type="email" name="email" required className="form-control" placeholder="you@university.edu" value={formData.email} onChange={handleChange} />
+                                <Mail size={17} className="input-icon" />
+                            </div>
                         </div>
-                        <p style={{ fontSize: '0.75rem', marginTop: '5px' }}>Must have uppercase, lowercase, number, & special char (Min 8)</p>
+                        <div className="form-group">
+                            <label className="form-label">Password</label>
+                            <div className="input-with-icon">
+                                <input type="password" name="password" required className="form-control" placeholder="Min 8 characters" value={formData.password} onChange={handleChange} />
+                                <Lock size={17} className="input-icon" />
+                            </div>
+                        </div>
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '10px' }}>Register Account</button>
+
+                    <div className="divider"><span>{formData.role === 'student' ? 'Student Profile' : 'Company Profile'}</span></div>
+
+                    {formData.role === 'student' ? (
+                        <div className="grid-2 animate-fade-in" style={{ gap: '16px', marginBottom: '20px' }}>
+                            <div className="form-group">
+                                <label className="form-label">Full Name</label>
+                                <div className="input-with-icon">
+                                    <input type="text" name="name" required className="form-control" placeholder="John Doe" value={formData.name} onChange={handleChange} />
+                                    <User size={17} className="input-icon" />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Phone Number</label>
+                                <div className="input-with-icon">
+                                    <input type="text" name="contactNumber" required className="form-control" placeholder="+91 00000 00000" value={formData.contactNumber} onChange={handleChange} />
+                                    <Phone size={17} className="input-icon" />
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="animate-fade-in" style={{ marginBottom: '20px' }}>
+                            <div className="form-group" style={{ marginBottom: '16px' }}>
+                                <label className="form-label">Company Name</label>
+                                <div className="input-with-icon">
+                                    <input type="text" name="companyName" required className="form-control" placeholder="Acme Technologies" value={formData.companyName} onChange={handleChange} />
+                                    <Building2 size={17} className="input-icon" />
+                                </div>
+                            </div>
+                            <div className="grid-2" style={{ gap: '16px' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Industry</label>
+                                    <select name="industry" className="form-select" value={formData.industry} onChange={handleChange} required>
+                                        <option value="">Select industry...</option>
+                                        <option value="Technology">Technology</option>
+                                        <option value="Finance">Finance & Banking</option>
+                                        <option value="Healthcare">Healthcare</option>
+                                        <option value="Education">Education</option>
+                                        <option value="Manufacturing">Manufacturing</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Website</label>
+                                    <div className="input-with-icon">
+                                        <input type="url" name="websiteUrl" className="form-control" placeholder="https://company.com" value={formData.websiteUrl} onChange={handleChange} />
+                                        <Globe size={17} className="input-icon" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Captcha Section */}
+                    <div className="divider"><span>Security Check</span></div>
+                    <div style={{ marginBottom: '24px' }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+                            <div 
+                                onClick={!captchaLoading ? refreshCaptcha : undefined}
+                                style={{ 
+                                    background: 'white', border: '1px solid var(--border)', 
+                                    borderRadius: '12px', cursor: 'pointer', display: 'flex',
+                                    padding: '4px 12px', alignItems: 'center', justifyContent: 'center',
+                                    minWidth: '140px', position: 'relative', overflow: 'hidden'
+                                }}
+                                title="Click to refresh"
+                            >
+                                {captchaLoading ? (
+                                    <div className="spinner-dark"></div>
+                                ) : (
+                                    <div dangerouslySetInnerHTML={{ __html: captchaSvg }} style={{ height: '36px', display: 'flex', alignItems: 'center' }} />
+                                )}
+                            </div>
+                            <button type="button" onClick={refreshCaptcha} className="btn btn-outline" style={{ width: '46px', padding: 0, borderRadius: '12px', flexShrink: 0 }} disabled={captchaLoading}>
+                                <RefreshCw size={18} className={captchaLoading ? 'animate-spin' : ''} />
+                            </button>
+                            <div className="input-with-icon" style={{ flex: 1 }}>
+                                <input name="captcha" placeholder="Enter code" className="form-control" style={{ height: '100%', borderRadius: '12px' }} value={formData.captcha} onChange={handleChange} required />
+                                <Lock size={16} className="input-icon" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', height: '48px', fontSize: '15px', fontWeight: '700', gap: '8px' }}>
+                        {loading ? <div className="spinner"></div> : <>Create Account <ChevronRight size={18} /></>}
+                    </button>
                 </form>
-                <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.9rem' }}>
-                    Already signed up? <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: '500' }}>Login here</Link>
-                </p>
+
+                <div style={{ marginTop: '24px', textAlign: 'center', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                        Already have an account?{' '}
+                        <Link to="/login" style={{ color: 'var(--primary)', fontWeight: '700' }}>Sign in here</Link>
+                    </p>
+                </div>
             </div>
         </div>
     );

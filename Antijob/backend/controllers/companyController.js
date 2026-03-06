@@ -2,11 +2,16 @@ const CompanyProfile = require('../models/CompanyProfile');
 const Job = require('../models/Job');
 const Application = require('../models/Application');
 const { sendEmail } = require('../utils/emailService');
+const { updateJobStatus } = require('../utils/jobStatusHelper');
 
 exports.getProfile = async (req, res) => {
     try {
-        const profile = await CompanyProfile.findOne({ user: req.user.id });
-        res.json(profile);
+        const profile = await CompanyProfile.findOne({ user: req.user.id }).populate('user', 'email');
+        const profileObj = profile.toObject();
+        if (profile.user) {
+            profileObj.loginEmail = profile.user.email;
+        }
+        res.json(profileObj);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -15,9 +20,28 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
     try {
         const profile = await CompanyProfile.findOne({ user: req.user.id });
+        if (profile.isLocked) return res.status(403).json({ error: 'Profile is locked. Request edit permission first.' });
+        
         Object.assign(profile, req.body);
+        
+        profile.isLocked = true;
+        profile.editRequestStatus = 'None';
+        
         await profile.save();
-        res.json({ message: 'Profile updated successfully', profile });
+        res.json({ message: 'Profile updated successfully and locked.', profile });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.requestEdit = async (req, res) => {
+    try {
+        const profile = await CompanyProfile.findOne({ user: req.user.id });
+        if (!profile.isLocked) return res.status(400).json({ error: 'Profile is already unlocked' });
+        
+        profile.editRequestStatus = 'Pending';
+        await profile.save();
+        res.json({ message: 'Edit request sent to admin', profile });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -27,25 +51,74 @@ exports.updateProfile = async (req, res) => {
 exports.postJob = async (req, res) => {
     try {
         const company = await CompanyProfile.findOne({ user: req.user.id });
-        if (!company.isApproved) return res.status(403).json({ error: 'Company must be approved by TPO to post jobs.' });
+        if (!company) return res.status(404).json({ error: 'Company profile not found. Please complete setup.' });
+        
+        // Removed hard blocks for demo if requested to just post, 
+        // but keeping current logic if it's there. 
+        // requirements: "Company Name (auto from company account)"
+        
+        const { 
+            title, description, requiredSkills, requiredStudents, 
+            location, package: pkg, appStartDate, appCloseDate,
+            minCGPA, eligibleBranches
+        } = req.body;
 
-        const newJob = new Job({ ...req.body, company: company._id, status: 'Pending Approval' });
+        const newJob = new Job({ 
+            company: company._id,
+            title, 
+            description, 
+            requiredSkills, 
+            requiredStudents, 
+            location, 
+            package: pkg,
+            salary: `${pkg} LPA`, // Auto-populate legacy field
+            criteria: {
+                minCGPA: minCGPA || 0,
+                eligibleBranches: eligibleBranches || []
+            },
+            appStartDate, 
+            appCloseDate,
+            status: 'Pending Approval'
+        });
+
         await newJob.save();
+        console.log(`Job created: ${newJob._id} for company ${company.companyName}`);
 
-        res.status(201).json({ message: 'Job posted and sent for admin approval.', newJob });
+        res.status(201).json({ message: 'Job posted successfully. Awaiting Admin approval.', newJob });
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        console.error('Post Job Error:', err);
+        res.status(500).json({ error: 'Server error posting job' });
     }
 };
 
-// Get company jobs
+// Get company jobs with stats
 exports.getJobs = async (req, res) => {
     try {
+        console.log(`Getting jobs for user: ${req.user.email} (Role: ${req.user.role})`);
         const company = await CompanyProfile.findOne({ user: req.user.id });
-        const jobs = await Job.find({ company: company._id });
-        res.json(jobs);
+        if (!company) return res.status(404).json({ error: 'Company profile not found.' });
+        
+        const jobs = await Job.find({ company: company._id }).lean();
+        
+        const jobsWithApps = await Promise.all(jobs.map(async (j) => {
+            let actualStatus = j.status;
+            try {
+                const freshJob = await Job.findById(j._id);
+                if (freshJob) {
+                    actualStatus = await updateJobStatus(freshJob);
+                }
+            } catch (statusErr) {
+                console.error(`Status sync failed for job ${j._id}:`, statusErr.message);
+            }
+
+            const count = await Application.countDocuments({ job: j._id });
+            return { ...j, status: actualStatus, applicationCount: count };
+        }));
+
+        console.log(`Returning ${jobsWithApps.length} jobs for company ${company.companyName}`);
+        res.json(jobsWithApps);
     } catch (err) {
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error fetching jobs' });
     }
 };
 
@@ -56,13 +129,16 @@ exports.getApplicants = async (req, res) => {
         const job = await Job.findOne({ _id: req.params.jobId, company: company._id });
         if (!job) return res.status(404).json({ error: 'Job not found' });
 
-        const applications = await Application.find({ job: job._id }).populate({
-            path: 'student',
-            populate: { path: 'user', select: 'email' }
-        });
+        const applications = await Application.find({ job: job._id })
+            .populate({
+                path: 'student',
+                select: 'name emailAddress contactNumber resumeUrl skills education'
+            })
+            .lean();
 
         res.json(applications);
     } catch (err) {
+        console.error('Get Applicants Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
@@ -80,7 +156,6 @@ exports.updateApplicationStatus = async (req, res) => {
         const application = await Application.findById(req.params.appId).populate('student').populate('job');
         if (!application) return res.status(404).json({ error: 'Application not found' });
 
-        // Validate Transition
         if (application.status === 'Selected' || application.status === 'Rejected') {
             return res.status(400).json({ error: 'Terminal state reached, action invalid' });
         }
@@ -93,17 +168,17 @@ exports.updateApplicationStatus = async (req, res) => {
         application.auditLog.push({ status, changedBy: req.user.id, remarks });
         await application.save();
 
-        // Trigger Email to Student using their populated user's email
-        // Let's assume student populates up to user to get email, for brevity we get user directly
         const stdUser = await require('../models/User').findById(application.student.user);
-        const emailHtml = `
-      <h3>Update on your application for ${application.job.title}</h3>
-      <p>Your application status has changed to: <strong>${status}</strong></p>
-      ${remarks ? `<p>Remarks: ${remarks}</p>` : ''}
-    `;
-        await sendEmail(stdUser.email, `Application Status Update: ${status}`, emailHtml);
+        if (stdUser && stdUser.email) {
+            const emailHtml = `
+                <h3>Update on your application for ${application.job.title}</h3>
+                <p>Your application status has changed to: <strong>${status}</strong></p>
+                ${remarks ? `<p>Remarks: ${remarks}</p>` : ''}
+            `;
+            await sendEmail(stdUser.email, `Application Status Update: ${status}`, emailHtml);
+        }
 
-        res.json({ message: 'Status updated and email generated', application });
+        res.json({ message: 'Status updated', application });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }

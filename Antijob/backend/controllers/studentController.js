@@ -5,7 +5,10 @@ const { sendEmail } = require('../utils/emailService');
 
 exports.getProfile = async (req, res) => {
     try {
-        const profile = await StudentProfile.findOne({ user: req.user.id });
+        const profile = await StudentProfile.findOne({ user: req.user.id }).populate('user', 'email');
+        if (profile && !profile.emailAddress && profile.user) {
+            profile.emailAddress = profile.user.email;
+        }
         res.json(profile);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
@@ -15,74 +18,132 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
     try {
         const profile = await StudentProfile.findOne({ user: req.user.id });
-        if (profile.isLocked) {
-            return res.status(403).json({ error: 'Profile is locked by Admin. Cannot update academic details.' });
+        const { 
+            name, contactNumber, profilePhoto, gender, dateOfBirth, 
+            address, linkedinUrl, education, skills,
+            activeBacklogs, resumeUrl 
+        } = req.body;
+
+        // Ensure email is not editable
+        // const { emailAddress, ...otherData } = req.body; 
+        
+        if (profile.isLocked && profile.editRequestStatus !== 'Approved') {
+            return res.status(403).json({ error: 'Profile is locked. Please request edit permission from Admin.' });
         }
 
-        const { name, contactNumber, cgpa, branch, passingYear, activeBacklogs, resumeUrl } = req.body;
+        // 1. Basic Info
         profile.name = name || profile.name;
         profile.contactNumber = contactNumber || profile.contactNumber;
-        profile.cgpa = cgpa !== undefined ? cgpa : profile.cgpa;
-        profile.branch = branch || profile.branch;
-        profile.passingYear = passingYear || profile.passingYear;
+        profile.profilePhoto = profilePhoto || profile.profilePhoto;
+        profile.gender = gender || profile.gender;
+        profile.dateOfBirth = dateOfBirth || profile.dateOfBirth;
+        // profile.emailAddress = emailAddress || profile.emailAddress; // EXCLUDED
+        profile.address = address || profile.address;
+        profile.linkedinUrl = linkedinUrl || profile.linkedinUrl;
+
+        // 2. Education
+        if (education) {
+            profile.education = { ...profile.education, ...education };
+            // Sync legacy fields
+            profile.cgpa = education.cgpa !== undefined ? education.cgpa : profile.cgpa;
+            profile.branch = education.branch || profile.branch;
+            profile.passingYear = education.endYear || profile.passingYear;
+        }
+
+        // 3. Skills
+        if (skills) {
+            profile.skills = { ...profile.skills, ...skills };
+        }
+
+        // 4. Internal/Misc
         profile.activeBacklogs = activeBacklogs !== undefined ? activeBacklogs : profile.activeBacklogs;
         profile.resumeUrl = resumeUrl || profile.resumeUrl;
+
+        // Reset edit permission after save
+        profile.editRequestStatus = 'None';
 
         await profile.save();
         res.json({ message: 'Profile updated successfully', profile });
     } catch (err) {
+        console.error('Update Profile Error:', err);
         res.status(500).json({ error: 'Server error tracking profile update' });
     }
 };
 
+const { updateJobStatus } = require('../utils/jobStatusHelper');
+
 exports.getEligibleJobs = async (req, res) => {
     try {
-        if (!req.user.isVerified) {
-            return res.status(403).json({ error: 'Wait for Admin verification to view jobs' });
-        }
-
         const profile = await StudentProfile.findOne({ user: req.user.id });
         if (!profile) return res.status(404).json({ error: 'Profile not found' });
 
-        // ELIGIBILITY ENGINE (MongoDB Query + Backend Filter)
-        const jobs = await Job.find({ status: 'Live' }).populate('company', 'companyName industry');
+        // Get all jobs and update statuses
+        const allJobs = await Job.find().populate('company', 'companyName industry location').lean();
+        
+        const freshJobs = await Promise.all(allJobs.map(async (j) => {
+            const jobDoc = await Job.findById(j._id);
+            const status = await updateJobStatus(jobDoc);
+            return { ...j, status };
+        }));
 
-        const eligibleJobs = jobs.filter(job => {
-            const c = job.criteria;
-            if (profile.cgpa < c.minCGPA) return false;
-            if (profile.activeBacklogs > c.maxBacklogs) return false;
-            if (profile.passingYear !== c.passingYear) return false;
-            if (c.allowedBranches && c.allowedBranches.length > 0 && !c.allowedBranches.includes(profile.branch)) return false;
-            return true;
+        // Filter: Requirement says "visible between Start and Close Date" 
+        // but also "See status Upcoming/Open/Closed". 
+        // We will show Upcoming and Open, and maybe Closed if recently closed.
+        const visibleJobs = freshJobs.filter(job => {
+            // Show if it's not Closed or if the student applied
+            // For now, let's show all Upcoming, Open, and Closed jobs so they see the full portal.
+            return ['Upcoming', 'Open', 'Closed', 'Positions Filled'].includes(job.status);
         });
 
-        res.json(eligibleJobs);
+        res.json(visibleJobs);
     } catch (err) {
+        console.error('Get Eligible Jobs Error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
 
 exports.applyForJob = async (req, res) => {
     try {
-        if (!req.user.isVerified) return res.status(403).json({ error: 'Wait for Admin Verification' });
+        const job = await Job.findById(req.params.jobId);
+        if (!job) return res.status(404).json({ error: 'Job not found' });
 
-        const job = await Job.findById(req.params.jobId).populate('company');
-        if (!job || job.status !== 'Live') return res.status(404).json({ error: 'Job not found or not live' });
-
-        const profile = await StudentProfile.findOne({ user: req.user.id }).populate('user');
-
-        // Validation again at API level
-        const c = job.criteria;
-        if (profile.cgpa < c.minCGPA ||
-            profile.activeBacklogs > c.maxBacklogs ||
-            profile.passingYear !== c.passingYear ||
-            (c.allowedBranches.length > 0 && !c.allowedBranches.includes(profile.branch))) {
-            return res.status(403).json({ error: 'Eligibility requirements not met' });
+        // Refresh and check status
+        const status = await updateJobStatus(job);
+        
+        if (status !== 'Open') {
+            let msg = 'Applications are not currently open for this job.';
+            if (status === 'Upcoming') msg = 'This job is upcoming. Applications haven\'t started yet.';
+            if (status === 'Closed') msg = 'Applications for this job are closed.';
+            if (status === 'Positions Filled') msg = 'We have already reached the required number of applications.';
+            return res.status(400).json({ error: msg });
         }
 
-        // Checking if already applied via unique indexing catch block or explicitly
+        const profile = await StudentProfile.findOne({ user: req.user.id });
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+        // Criteria Check
+        if (job.criteria) {
+            // 1. CGPA Check
+            const studentCGPA = profile.education?.cgpa || profile.cgpa || 0;
+            if (job.criteria.minCGPA && studentCGPA < job.criteria.minCGPA) {
+                return res.status(400).json({ error: `Minimum CGPA required is ${job.criteria.minCGPA}. Your CGPA is ${studentCGPA}.` });
+            }
+
+            // 2. Branch Check
+            const studentBranch = profile.education?.branch || profile.branch;
+            if (job.criteria.eligibleBranches && job.criteria.eligibleBranches.length > 0) {
+                const isEligible = job.criteria.eligibleBranches.some(b => 
+                    b.toLowerCase().trim() === studentBranch?.toLowerCase().trim()
+                );
+                if (!isEligible) {
+                    return res.status(400).json({ error: `Your branch (${studentBranch}) is not eligible for this job.` });
+                }
+            }
+        }
+        
+        // Already applied?
         const existing = await Application.findOne({ job: job._id, student: profile._id });
-        if (existing) return res.status(400).json({ error: 'Already applied for this job' });
+        if (existing) return res.status(400).json({ error: 'You have already applied for this job' });
 
         // Create Application
         const application = new Application({
@@ -93,11 +154,14 @@ exports.applyForJob = async (req, res) => {
         });
 
         await application.save();
+        
+        // Update job status again (in case this was the last position)
+        await updateJobStatus(job);
 
         res.json({ message: 'Applied successfully' });
     } catch (err) {
         if (err.code === 11000) return res.status(400).json({ error: 'Already applied' });
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Server error applying for job' });
     }
 };
 
@@ -106,10 +170,35 @@ exports.getApplications = async (req, res) => {
         const profile = await StudentProfile.findOne({ user: req.user.id });
         const apps = await Application.find({ student: profile._id }).populate({
             path: 'job',
-            populate: { path: 'company', select: 'companyName' }
-        });
+            populate: { path: 'company', select: 'companyName industry location' }
+        }).lean();
         res.json(apps);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.requestEditPermission = async (req, res) => {
+    try {
+        const profile = await StudentProfile.findOne({ user: req.user.id });
+        if (profile.editRequestStatus === 'Pending') return res.status(400).json({ error: 'Request already pending' });
+        
+        profile.editRequestStatus = 'Pending';
+        await profile.save();
+        res.json({ message: 'Edit request sent to Admin' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to send request' });
+    }
+};
+
+exports.uploadPhoto = async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        const profile = await StudentProfile.findOne({ user: req.user.id });
+        profile.profilePhoto = `http://localhost:5000/uploads/${req.file.filename}`;
+        await profile.save();
+        res.json({ message: 'Photo uploaded!', url: profile.profilePhoto });
+    } catch (err) {
+        res.status(500).json({ error: 'Upload failed' });
     }
 };

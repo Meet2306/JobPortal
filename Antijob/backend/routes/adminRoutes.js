@@ -9,6 +9,8 @@ router.use(roleMiddleware(['admin']));
 
 router.get('/pending', adminController.getPendingApprovals);
 router.patch('/users/:userId/verify', adminController.verifyUser);
+router.delete('/users/:userId/reject', adminController.rejectUser);
+router.patch('/profiles/:profileId/edit-permission', adminController.handleEditRequest);
 router.patch('/jobs/:jobId/approve', adminController.approveJob);
 router.get('/analytics', adminController.getAnalytics);
 

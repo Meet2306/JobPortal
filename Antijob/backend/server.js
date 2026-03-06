@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const path = require('path');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
@@ -12,12 +14,34 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 // Middleware
-app.use(express.json());
-app.use(cookieParser());
+const ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'https://job-portal-japb.vercel.app'
+];
 app.use(cors({
-    origin: 'http://localhost:5173', // Vite default port
+    origin: (origin, callback) => {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
 }));
+app.use(express.json());
+app.use(cookieParser());
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'placements-node-secret',
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // Set to true if using https
+        httpOnly: true,
+        maxAge: 3600000, // 1 hour
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+    }
+}));
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);

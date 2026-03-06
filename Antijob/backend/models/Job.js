@@ -4,22 +4,25 @@ const jobSchema = new mongoose.Schema({
     company: { type: mongoose.Schema.Types.ObjectId, ref: 'CompanyProfile', required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    requiredSkills: [{ type: String }],
+    requiredStudents: { type: Number, required: true, default: 1 },
     location: { type: String, required: true },
-    package: { type: Number, required: true }, // in LPA for analytics
-
+    salary: { type: String }, // display text
+    package: { type: Number, default: 0 }, // numeric for analytics
+    
     criteria: {
-        minCGPA: { type: Number, required: true },
-        allowedBranches: [{ type: String }],
-        passingYear: { type: Number, required: true },
-        maxBacklogs: { type: Number, default: 0 }
+        minCGPA: { type: Number, default: 0 },
+        eligibleBranches: [{ type: String }]
     },
+    
+    appStartDate: { type: Date },
+    appCloseDate: { type: Date },
 
     status: {
         type: String,
-        enum: ['Draft', 'Pending Approval', 'Approved', 'Live', 'Closed'],
-        default: 'Draft'
-    },
-    remarks: { type: String } // TPO can add remarks for rejection/approval
+        enum: ['Pending Approval', 'Upcoming', 'Open', 'Closed', 'Positions Filled', 'Rejected', 'Live'],
+        default: 'Pending Approval'
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Job', jobSchema);
