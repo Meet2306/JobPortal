@@ -86,12 +86,21 @@ exports.getEligibleJobs = async (req, res) => {
             return { ...j, status };
         }));
 
-        // Filter: Requirement says "visible between Start and Close Date" 
-        // but also "See status Upcoming/Open/Closed". 
-        // We will show Upcoming and Open, and maybe Closed if recently closed.
+        const currentYear = new Date().getFullYear();
+        const currentStudentYear = currentYear + 1;
+        const studentPassingYear = profile.endYear || profile.passingYear;
+        const isCurrentStudent = studentPassingYear === currentStudentYear;
+
+        // Filter based on visibility and status
         const visibleJobs = freshJobs.filter(job => {
-            // Show if it's not Closed or if the student applied
-            // For now, let's show all Upcoming, Open, and Closed jobs so they see the full portal.
+            // 1. Visibility Check
+            if (job.visibility === 'Current Only' && !isCurrentStudent) {
+                return false;
+            }
+
+            // 2. Status Check: Requirement says "visible between Start and Close Date" 
+            // but also "See status Upcoming/Open/Closed". 
+            // We will show Upcoming and Open, and maybe Closed if recently closed.
             return ['Upcoming', 'Open', 'Closed', 'Positions Filled'].includes(job.status);
         });
 
@@ -120,6 +129,16 @@ exports.applyForJob = async (req, res) => {
 
         const profile = await StudentProfile.findOne({ user: req.user.id });
         if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+        // Visibility Check
+        const currentYear = new Date().getFullYear();
+        const currentStudentYear = currentYear + 1;
+        const studentPassingYear = profile.education?.endYear || profile.endYear || profile.passingYear;
+        const isCurrentStudent = studentPassingYear === currentStudentYear;
+
+        if (job.visibility === 'Current Only' && !isCurrentStudent) {
+            return res.status(403).json({ error: 'This job is reserved for current students graduating in ' + currentStudentYear + ' only.' });
+        }
 
         // Criteria Check
         if (job.criteria) {

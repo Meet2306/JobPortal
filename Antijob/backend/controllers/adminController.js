@@ -106,12 +106,15 @@ exports.rejectUser = async (req, res) => {
 exports.approveJob = async (req, res) => {
     try {
         const { jobId } = req.params;
-        const { status, remarks } = req.body; // 'Approved' -> 'Live', 'Rejected'
+        const { status, remarks, visibility } = req.body; // 'Approved' -> 'Live', 'Rejected'
+        
+        console.log(`Approving Job: ${jobId}. Status: ${status}, Visibility: ${visibility}`);
 
         const job = await Job.findById(jobId).populate({ path: 'company', populate: { path: 'user', select: 'email' } });
         if (!job) return res.status(404).json({ error: 'Job not found' });
 
         job.status = status;
+        if (visibility) job.visibility = visibility;
         job.remarks = remarks || '';
         await job.save();
         

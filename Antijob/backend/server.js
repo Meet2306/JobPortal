@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const path = require('path');
 require('dotenv').config();
+const helmet = require("helmet");
 
 const authRoutes = require('./routes/authRoutes');
 const studentRoutes = require('./routes/studentRoutes');
@@ -29,6 +30,18 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'placements-node-secret',
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 3600000, // 1 hour
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+    }
+}));
+app.use(helmet());
 
 
 // Routes

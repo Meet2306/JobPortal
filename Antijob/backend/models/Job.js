@@ -22,6 +22,11 @@ const jobSchema = new mongoose.Schema({
         type: String,
         enum: ['Pending Approval', 'Upcoming', 'Open', 'Closed', 'Positions Filled', 'Rejected', 'Live'],
         default: 'Pending Approval'
+    },
+    visibility: {
+        type: String,
+        enum: ['All', 'Current Only'],
+        default: 'All'
     }
 }, { timestamps: true });
 

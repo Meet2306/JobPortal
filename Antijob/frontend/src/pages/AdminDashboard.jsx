@@ -45,6 +45,8 @@ const AdminDashboard = () => {
     const [editRequests, setEditRequests] = useState([]);
     const [analytics, setAnalytics] = useState(null);
     const [selectedUser, setSelectedUser] = useState(null);
+    const [jobToApprove, setJobToApprove] = useState(null);
+    const [approvalData, setApprovalData] = useState({ visibility: 'All', remarks: '' });
 
     useEffect(() => { fetchPending(); fetchAnalytics(); }, []);
 
@@ -74,7 +76,33 @@ const AdminDashboard = () => {
     };
 
     const handleJobAction = async (jobId, status) => {
-        try { const remarks = prompt('Remarks (optional):') || ''; await api.patch(`/admin/jobs/${jobId}/approve`, { status, remarks }); fetchPending(); } catch (e) { alert('Failed'); }
+        if (status === 'Rejected') {
+            if (!window.confirm('Reject this job posting?')) return;
+            try { 
+                const remarks = prompt('Rejection Remarks (optional):') || ''; 
+                await api.patch(`/admin/jobs/${jobId}/approve`, { status, remarks }); 
+                fetchPending(); 
+            } catch (e) { alert('Failed'); }
+        } else {
+            const job = pendingJobs.find(p => p._id === jobId);
+            setJobToApprove(job);
+            setApprovalData({ visibility: 'All', remarks: '' });
+        }
+    };
+
+    const submitApproval = async () => {
+        if (!jobToApprove) return;
+        try {
+            await api.patch(`/admin/jobs/${jobToApprove._id}/approve`, { 
+                status: 'Live', 
+                visibility: approvalData.visibility,
+                remarks: approvalData.remarks 
+            });
+            setJobToApprove(null);
+            fetchPending();
+        } catch (e) {
+            alert('Failed to approve job');
+        }
     };
 
     const handleEditRequest = async (profileId, action, role) => {
@@ -550,6 +578,61 @@ const AdminDashboard = () => {
                             <button onClick={() => setSelectedUser(null)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
                             <button onClick={() => rejectUser(selectedUser._id)} className="btn btn-danger" style={{ flex: 1 }}>Reject</button>
                             <button onClick={() => verifyUser(selectedUser._id)} className="btn btn-success" style={{ flex: 1 }}>Approve</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── JOB APPROVAL MODAL ── */}
+            {jobToApprove && (
+                <div className="modal-overlay animate-fade-in" onClick={() => setJobToApprove(null)}>
+                    <div className="modal-card animate-scale-in" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+                        <div className="modal-header">
+                            <div className="modal-title">Approve Job Posting</div>
+                            <div className="modal-subtitle">Configure visibility and remarks for {jobToApprove.title}</div>
+                        </div>
+
+                        <div className="modal-body" style={{ padding: 24 }}>
+                            <div style={{ marginBottom: 20 }}>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text-main)' }}>Display Visibility</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    <button 
+                                        className={`btn ${approvalData.visibility === 'All' ? 'btn-primary' : 'btn-outline'}`}
+                                        onClick={() => setApprovalData(d => ({ ...d, visibility: 'All' }))}
+                                        style={{ fontSize: 12 }}
+                                    >
+                                        Display to All Students
+                                    </button>
+                                    <button 
+                                        className={`btn ${approvalData.visibility === 'Current Only' ? 'btn-primary' : 'btn-outline'}`}
+                                        onClick={() => setApprovalData(d => ({ ...d, visibility: 'Current Only' }))}
+                                        style={{ fontSize: 12 }}
+                                    >
+                                        Current Students Only
+                                    </button>
+                                </div>
+                                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                                    {approvalData.visibility === 'Current Only' 
+                                        ? `Visible only to students graduating in ${new Date().getFullYear() + 1}`
+                                        : 'Visible to students of all batches (Past and Current)'}
+                                </p>
+                            </div>
+
+                            <div style={{ marginBottom: 20 }}>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text-main)' }}>Remarks (Optional)</label>
+                                <textarea 
+                                    className="auth-input-field" 
+                                    style={{ width: '100%', minHeight: 80, padding: 12, borderRadius: 10, border: '1px solid var(--border)' }}
+                                    placeholder="Add any instructions or notes for the company..."
+                                    value={approvalData.remarks}
+                                    onChange={e => setApprovalData(d => ({ ...d, remarks: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 12, padding: '0 24px 24px' }}>
+                            <button onClick={() => setJobToApprove(null)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
+                            <button onClick={submitApproval} className="btn btn-success" style={{ flex: 1 }}>Live & Approve</button>
                         </div>
                     </div>
                 </div>

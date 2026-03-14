@@ -58,10 +58,16 @@ const StudentDashboard = () => {
     const { user, logout } = useContext(AuthContext);
     const [profile, setProfile] = useState({
         name: '', contactNumber: '', profilePhoto: '', gender: '', dateOfBirth: '',
-        education: { degree: '', branch: '', collegeName: '', cgpa: 0 },
-        skills: { technical: [], soft: [] },
+        education: { 
+            degree: '', branch: '', collegeName: '', status: 'Pursuing',
+            cgpa: 0, startYear: '', endYear: '', 
+            tenthPercentage: 0, twelfthPercentage: 0 
+        },
+        skills: { technical: [], soft: [], tools: [] },
         resumeUrl: '', activeBacklogs: 0,
-        address: { city: '' }, isLocked: false, editRequestStatus: 'None'
+        address: { city: '', state: '', country: 'India' }, 
+        linkedinUrl: '',
+        isLocked: false, editRequestStatus: 'None'
     });
     const [jobs, setJobs] = useState([]);
     const [applications, setApplications] = useState([]);
@@ -133,16 +139,14 @@ const StudentDashboard = () => {
     /* Profile completion */
     const completion = (() => {
         let s = 0;
-        if (profile.name) s++;
-        if (profile.contactNumber) s++;
-        if (profile.gender) s++;
-        if (profile.education?.degree) s++;
-        if (profile.education?.branch) s++;
-        if (profile.education?.cgpa > 0) s++;
-        if (profile.resumeUrl) s++;
-        if (profile.skills?.technical?.length > 0) s++;
-        if (profile.address?.city) s++;
-        return Math.round((s / 9) * 100);
+        const fields = [
+            profile.name, profile.contactNumber, profile.gender, profile.dateOfBirth,
+            profile.education?.degree, profile.education?.branch, profile.education?.collegeName,
+            profile.education?.cgpa, profile.education?.endYear, profile.resumeUrl,
+            profile.skills?.technical?.length, profile.address?.city, profile.linkedinUrl
+        ];
+        fields.forEach(f => { if(f) s++; });
+        return Math.round((s / fields.length) * 100);
     })();
 
     /* Status counts */
@@ -418,20 +422,44 @@ const StudentDashboard = () => {
                                                 <div className="grid-2" style={{ gap: 16 }}>
                                                     <div className="form-group"><label className="form-label">Name</label><input className="form-control" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} disabled={isLocked} /></div>
                                                     <div className="form-group"><label className="form-label">Phone</label><input className="form-control" value={profile.contactNumber} onChange={e => setProfile({...profile, contactNumber: e.target.value})} disabled={isLocked} /></div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Gender</label>
+                                                        <select className="form-control" value={profile.gender} onChange={e => setProfile({...profile, gender: e.target.value})} disabled={isLocked}>
+                                                            <option value="">Select Gender</option>
+                                                            {['Male', 'Female', 'Other', 'Prefer not to say'].map(g => <option key={g} value={g}>{g}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div className="form-group"><label className="form-label">Date of Birth</label><input type="date" className="form-control" value={profile.dateOfBirth ? profile.dateOfBirth.split('T')[0] : ''} onChange={e => setProfile({...profile, dateOfBirth: e.target.value})} disabled={isLocked} /></div>
                                                     <div className="form-group"><label className="form-label">City</label><input className="form-control" value={profile.address?.city} onChange={e => setProfile({...profile, address: {...profile.address, city: e.target.value}})} disabled={isLocked} /></div>
+                                                    <div className="form-group"><label className="form-label">State</label><input className="form-control" value={profile.address?.state} onChange={e => setProfile({...profile, address: {...profile.address, state: e.target.value}})} disabled={isLocked} /></div>
+                                                    <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">LinkedIn URL</label><input type="url" className="form-control" value={profile.linkedinUrl} onChange={e => setProfile({...profile, linkedinUrl: e.target.value})} disabled={isLocked} /></div>
                                                 </div>
                                             )}
                                             {profileStep === 2 && (
-                                                <div className="grid-2" style={{ gap: 16 }}>
-                                                    <div className="form-group"><label className="form-label">Degree</label><input className="form-control" value={profile.education?.degree} onChange={e => setProfile({...profile, education: {...profile.education, degree: e.target.value}})} disabled={isLocked} /></div>
-                                                    <div className="form-group"><label className="form-label">Branch</label><input className="form-control" value={profile.education?.branch} onChange={e => setProfile({...profile, education: {...profile.education, branch: e.target.value}})} disabled={isLocked} /></div>
-                                                    <div className="form-group"><label className="form-label">CGPA</label><input className="form-control" type="number" step="0.01" value={profile.education?.cgpa} onChange={e => setProfile({...profile, education: {...profile.education, cgpa: parseFloat(e.target.value)}})} disabled={isLocked} /></div>
-                                                </div>
-                                            )}
+                                                 <div className="grid-2" style={{ gap: 16 }}>
+                                                     <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">College Name</label><input className="form-control" value={profile.education?.collegeName} onChange={e => setProfile({...profile, education: {...profile.education, collegeName: e.target.value}})} disabled={isLocked} /></div>
+                                                     <div className="form-group"><label className="form-label">Degree</label><input className="form-control" value={profile.education?.degree} onChange={e => setProfile({...profile, education: {...profile.education, degree: e.target.value}})} disabled={isLocked} /></div>
+                                                     <div className="form-group"><label className="form-label">Branch</label><input className="form-control" value={profile.education?.branch} onChange={e => setProfile({...profile, education: {...profile.education, branch: e.target.value}})} disabled={isLocked} /></div>
+                                                     <div className="form-group">
+                                                        <label className="form-label">Education Status</label>
+                                                        <select className="form-control" value={profile.education?.status} onChange={e => setProfile({...profile, education: {...profile.education, status: e.target.value}})} disabled={isLocked}>
+                                                            <option value="Pursuing">Pursuing</option>
+                                                            <option value="Completed">Completed</option>
+                                                        </select>
+                                                     </div>
+                                                     <div className="form-group"><label className="form-label">CGPA</label><input className="form-control" type="number" step="0.01" value={profile.education?.cgpa} onChange={e => setProfile({...profile, education: {...profile.education, cgpa: parseFloat(e.target.value)}})} disabled={isLocked} /></div>
+                                                     <div className="form-group"><label className="form-label">Start Year</label><input className="form-control" type="number" placeholder="2023" value={profile.education?.startYear} onChange={e => setProfile({...profile, education: {...profile.education, startYear: parseInt(e.target.value)}})} disabled={isLocked} /></div>
+                                                     <div className="form-group"><label className="form-label">End Year (Passing)</label><input className="form-control" type="number" placeholder="2027" value={profile.education?.endYear} onChange={e => setProfile({...profile, education: {...profile.education, endYear: parseInt(e.target.value)}})} disabled={isLocked} /></div>
+                                                     <div className="form-group"><label className="form-label">10th Percentage</label><input className="form-control" type="number" step="0.1" value={profile.education?.tenthPercentage} onChange={e => setProfile({...profile, education: {...profile.education, tenthPercentage: parseFloat(e.target.value)}})} disabled={isLocked} /></div>
+                                                     <div className="form-group"><label className="form-label">12th Percentage</label><input className="form-control" type="number" step="0.1" value={profile.education?.twelfthPercentage} onChange={e => setProfile({...profile, education: {...profile.education, twelfthPercentage: parseFloat(e.target.value)}})} disabled={isLocked} /></div>
+                                                 </div>
+                                             )}
                                             {profileStep === 3 && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                                    <div className="form-group"><label className="form-label">Skills (CSV)</label><textarea className="form-textarea" rows={3} value={profile.skills?.technical?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, technical: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} /></div>
-                                                    <div className="form-group"><label className="form-label">Resume Link</label><input type="url" className="form-control" value={profile.resumeUrl} onChange={e => setProfile({...profile, resumeUrl: e.target.value})} disabled={isLocked} /></div>
+                                                    <div className="form-group"><label className="form-label">Technical Skills (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.technical?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, technical: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="React, Node.js, MongoDB..." /></div>
+                                                    <div className="form-group"><label className="form-label">Soft Skills (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.soft?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, soft: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="Leadership, Communication..." /></div>
+                                                    <div className="form-group"><label className="form-label">Tools (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.tools?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, tools: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="VS Code, Docker, Postman..." /></div>
+                                                    <div className="form-group"><label className="form-label">Resume URL</label><input type="url" className="form-control" value={profile.resumeUrl} onChange={e => setProfile({...profile, resumeUrl: e.target.value})} disabled={isLocked} placeholder="https://drive.google.com/..." /></div>
                                                 </div>
                                             )}
                                             <div style={{ marginTop: 30, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
