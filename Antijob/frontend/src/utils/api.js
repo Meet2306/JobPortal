@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api',
+    baseURL: 'https://job-portal-pi-two.vercel.app/api',
     withCredentials: true, // important for cookies
 });
 
