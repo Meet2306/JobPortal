@@ -13,21 +13,17 @@ const companyRoutes = require('./routes/companyRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: false // FIX: allow cross-origin requests
+}));
 // Middleware
-const ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'https://job-portal-wpzs.vercel.app'
-];
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
-            return callback(null, true);
-        }
-        return callback(new Error('Not allowed by CORS'));
-    },
+    origin: [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "https://job-portal-wpzs.vercel.app"
+    ],
     credentials: true
 }));
 app.use(express.json());
