@@ -1,3 +1,10 @@
+// Helper to get frontend URL
+const getFrontendUrl = () => {
+    if (process.env.NODE_ENV === 'production') {
+        return process.env.FRONTEND_URL || 'https://job-portal-wpzs.vercel.app';
+    }
+    return 'http://localhost:5173';
+};
 // Helper to set CORS headers for Vercel
 const setCorsHeaders = (res) => {
     res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
@@ -105,7 +112,7 @@ exports.register = async (req, res) => {
         });
         await newUser.save();
 
-        const verifyUrl = `http://localhost:5173/verify-email/${verificationToken}`;
+            const verifyUrl = `${getFrontendUrl()}/verify-email/${verificationToken}`;
 
         // Create profiles with provided data
         if (role === 'student') {
@@ -209,7 +216,7 @@ exports.forgotPassword = async (req, res) => {
         user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
         await user.save();
 
-        const resetUrl = `http://localhost:5173/reset-password/${token}`;
+            const resetUrl = `${getFrontendUrl()}/reset-password/${token}`;
         await sendEmail(user.email, 'Password Reset Request', `
             <h3>Placement Portal Password Reset</h3>
             <p>You requested a password reset. Please click the link below to set a new password:</p>

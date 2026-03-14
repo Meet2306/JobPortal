@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const path = require('path');
 require('dotenv').config();
 const helmet = require("helmet");
@@ -36,7 +37,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(session({
+let sessionOptions = {
     secret: process.env.SESSION_SECRET || 'placements-node-secret',
     resave: false,
     saveUninitialized: false,
@@ -46,18 +47,17 @@ app.use(session({
         maxAge: 3600000, // 1 hour
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
-}));
+};
 
-// Catch-all OPTIONS handler for CORS preflight
-app.options('*', cors({
-    origin: [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "https://job-portal-wpzs.vercel.app"
-    ],
-    credentials: true
-}));
+if (process.env.NODE_ENV === 'production') {
+    sessionOptions.store = MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        ttl: 3600 // 1 hour
+    });
+}
+
+app.use(session(sessionOptions));
+
 
 
 
