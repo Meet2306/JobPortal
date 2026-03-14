@@ -1,3 +1,8 @@
+// Helper to set CORS headers for Vercel
+const setCorsHeaders = (res) => {
+    res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+};
 const User = require('../models/User');
 const StudentProfile = require('../models/StudentProfile');
 const CompanyProfile = require('../models/CompanyProfile');
@@ -34,6 +39,7 @@ const loginSchema = Joi.object({
 });
 
 exports.getCaptcha = (req, res) => {
+        setCorsHeaders(res);
     try {
         const captcha = svgCaptcha.create({
             size: 6,
@@ -52,6 +58,7 @@ exports.getCaptcha = (req, res) => {
 };
 
 exports.register = async (req, res) => {
+        setCorsHeaders(res);
     try {
         console.log('Incoming Registration Request:', req.body);
         
@@ -141,6 +148,7 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
+        setCorsHeaders(res);
     try {
         const { error } = loginSchema.validate(req.body);
         if (error) return res.status(400).json({ error: error.details[0].message });
@@ -177,11 +185,13 @@ exports.login = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
+        setCorsHeaders(res);
     res.clearCookie('token');
     res.json({ message: 'Logged out successfully' });
 };
 
 exports.me = async (req, res) => {
+        setCorsHeaders(res);
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
 
     const user = await User.findById(req.user.id).select('-password');
@@ -189,6 +199,7 @@ exports.me = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
+        setCorsHeaders(res);
     try {
         const user = await User.findOne({ email: req.body.email });
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -213,6 +224,7 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
+        setCorsHeaders(res);
     try {
         const user = await User.findOne({
             resetPasswordToken: req.params.token,
@@ -238,6 +250,7 @@ exports.resetPassword = async (req, res) => {
 };
 
 exports.verifyEmail = async (req, res) => {
+        setCorsHeaders(res);
     try {
         const { token } = req.params;
         const user = await User.findOne({ emailVerificationToken: token });
