@@ -13,7 +13,7 @@ const companyRoutes = require('./routes/companyRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
-
+app.use(helmet());
 // Middleware
 const ALLOWED_ORIGINS = [
     'http://localhost:5173',
@@ -22,9 +22,11 @@ const ALLOWED_ORIGINS = [
     'https://job-portal-wpzs.vercel.app'
 ];
 app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-        callback(new Error('Not allowed by CORS'));
+    origin: function (origin, callback) {
+        if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
     },
     credentials: true
 }));
@@ -33,15 +35,15 @@ app.use(cookieParser());
 app.use(session({
     secret: process.env.SESSION_SECRET || 'placements-node-secret',
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 3600000, // 1 hour
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
 }));
-app.use(helmet());
+
 
 
 // Routes
