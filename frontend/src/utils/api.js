@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://job-portal-two-chi.vercel.app/api',
+    baseURL: 'https://job-portal-backend-psi-flame.vercel.app/api',
     withCredentials: true, // important for cookies
 });
 

@@ -51,13 +51,16 @@ app.use('/api/admin', adminRoutes);
 // DB & Server startup
 const PORT = process.env.PORT || 5000;
 
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => {
-        console.log('MongoDB connected');
-        // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    })
-    .catch(err => {
-        console.error('MongoDB connection error:', err);
-    });
+let isConnected = false;
+
+const connectDB = async () => {
+    if (isConnected) return;
+
+    const db = await mongoose.connect(process.env.MONGODB_URI);
+    isConnected = db.connections[0].readyState;
+    console.log("MongoDB connected");
+};
+
+connectDB();
 
 module.exports = app;
