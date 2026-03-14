@@ -6,6 +6,7 @@ const session = require('express-session');
 const path = require('path');
 require('dotenv').config();
 const helmet = require("helmet");
+const fs = require('fs');
 
 const authRoutes = require('./routes/authRoutes');
 const studentRoutes = require('./routes/studentRoutes');
@@ -13,6 +14,12 @@ const companyRoutes = require('./routes/companyRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
+
+// Ensure uploads/ directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
 app.use(helmet({
     crossOriginResourcePolicy: false // FIX: allow cross-origin requests
 }));
