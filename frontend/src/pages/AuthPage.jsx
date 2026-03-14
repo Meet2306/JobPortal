@@ -17,25 +17,25 @@ const ease = [0.25, 0.1, 0.25, 1];
 
 const fieldContainer = {
   hidden: {},
-  show:   { transition: { staggerChildren: 0.08, delayChildren: 0.05 } }
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } }
 };
 const fieldItem = {
   hidden: { opacity: 0, y: 10 },
-  show:   { opacity: 1, y:  0, transition: { duration: 0.35, ease } }
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease } }
 };
 const formSwitch = {
-  enter: { opacity: 0, x:  14 },
-  show:  { opacity: 1, x:   0, transition: { duration: 0.35, ease } },
-  exit:  { opacity: 0, x: -10, transition: { duration: 0.22, ease } }
+  enter: { opacity: 0, x: 14 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.35, ease } },
+  exit: { opacity: 0, x: -10, transition: { duration: 0.22, ease } }
 };
 
 /* ═══════════════════════════════════════════════════════════════
    STEP CONFIG
 ═══════════════════════════════════════════════════════════════ */
 const REG_STEPS = [
-  { id: 1, label: 'Account Type', short: 'Type'   },
-  { id: 2, label: 'Credentials',  short: 'Login'  },
-  { id: 3, label: 'Profile',      short: 'Info'   },
+  { id: 1, label: 'Account Type', short: 'Type' },
+  { id: 2, label: 'Credentials', short: 'Login' },
+  { id: 3, label: 'Profile', short: 'Info' },
   { id: 4, label: 'Verification', short: 'Verify' },
 ];
 
@@ -43,7 +43,7 @@ const REG_STEPS = [
    SUB-COMPONENTS
 ═══════════════════════════════════════════════════════════════ */
 function FloatInput({ label, type = 'text', value, onChange, required, autoComplete, prefix, maxLength }) {
-  const [show, setShow]       = useState(false);
+  const [show, setShow] = useState(false);
   const [focused, setFocused] = useState(false);
   const isPass = type === 'password';
   const t = isPass ? (show ? 'text' : 'password') : type;
@@ -107,8 +107,8 @@ function StepBar({ current }) {
               <AnimatePresence mode="wait">
                 {current > s.id
                   ? <motion.span key="chk" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.2 }}>
-                      <Check size={13} />
-                    </motion.span>
+                    <Check size={13} />
+                  </motion.span>
                   : <motion.span key={s.id}>{s.id}</motion.span>}
               </AnimatePresence>
             </motion.div>
@@ -165,9 +165,9 @@ function PrimaryBtn({ children, loading, disabled, type = 'submit', onClick }) {
         initial={{ opacity: 0 }} whileHover={{ opacity: 1 }} transition={{ duration: 0.2 }} />
       {loading
         ? <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
-            <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-          </svg>
+          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
+          <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+        </svg>
         : <span className="relative z-10 flex items-center gap-2">{children}</span>}
     </motion.button>
   );
@@ -219,26 +219,76 @@ function OTPDisplay({ email, onBack }) {
 /* ═══════════════════════════════════════════════════════════════
    RIGHT PANEL — Avatar Image (slides in from right)
 ═══════════════════════════════════════════════════════════════ */
-function LeftImagePanel() {
+function LeftImagePanel({isRegister}) {
   return (
     <div className="hidden lg:flex flex-col items-center justify-center h-full relative overflow-hidden"
       style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 40%, #ede9fe 100%)' }}>
 
       {/* Decorative blobs */}
-      <div style={{ position:'absolute', top:'-60px', left:'-60px', width:300, height:300,
-        borderRadius:'50%', background:'rgba(99,102,241,0.08)', pointerEvents:'none' }} />
-      <div style={{ position:'absolute', bottom:'-40px', right:'-40px', width:220, height:220,
-        borderRadius:'50%', background:'rgba(139,92,246,0.07)', pointerEvents:'none' }} />
-      <div style={{ position:'absolute', top:'35%', right:'8px', width:110, height:110,
-        borderRadius:'50%', background:'rgba(59,130,246,0.055)', pointerEvents:'none' }} />
+      <div style={{
+        position: 'absolute', top: '-60px', left: '-60px', width: 300, height: 300,
+        borderRadius: '50%', background: 'rgba(99,102,241,0.08)', pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '-40px', right: '-40px', width: 220, height: 220,
+        borderRadius: '50%', background: 'rgba(139,92,246,0.07)', pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute', top: '35%', right: '8px', width: 110, height: 110,
+        borderRadius: '50%', background: 'rgba(59,130,246,0.055)', pointerEvents: 'none'
+      }} />
+      <motion.div
+        initial={{ x: -80, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 0.6, duration: 0.7 }}
+        style={{
+          position: "absolute",
+          left: "60px",
+          top: "30%",
+          transform: "translateY(-50%)",
+          background: "rgba(255,255,255,0.3)",
+          backdropFilter: "blur(10px)",
+          padding: "28px 32px",
+          borderRadius: "16px",
+          maxWidth: "400px",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+          border: "1px solid rgba(255,255,255,0.4)"
+        }}
+      >
+        <h2 style={{
+          fontSize: "28px",
+          fontWeight: "700",
+          color: "#1e293b",
+          marginBottom: "10px"
+        }}>
+          {isRegister ? "Create Your Account 💼" : "Welcome Back 👋"}
+        </h2>
 
+        <p style={{
+          fontSize: "14px",
+          color: "#475569",
+          lineHeight: "1.6"
+        }}>
+          {isRegister ? (
+            <>
+              Start your placement journey today.<br />
+              Create an account and connect with top companies.
+            </>
+          ) : (
+            <>
+              Your career starts here.<br />
+              Access your placement dashboard and discover new opportunities.
+            </>
+          )}
+        </p>
+      </motion.div>
       {/* Avatar image — slides in from LEFT after 1s delay */}
       <motion.div
-        initial={{ x: -300, opacity: 0 }}
+        initial={{ x: -200, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ delay: 1, duration: 0.8, ease: 'easeOut' }}
-        className="relative z-10"
-        style={{ width:'100%', maxWidth:520, padding:'0 24px' }}>
+        className="absolute bottom-[-7px] right-[-33px] z-10"
+        style={{ maxWidth: 450 }}>
         <img
           src="/avatar-male.png"
           alt="Student working on laptop"
@@ -246,7 +296,9 @@ function LeftImagePanel() {
             width: '100%',
             objectFit: 'contain',
             mixBlendMode: 'multiply',
-            filter: 'drop-shadow(0 28px 56px rgba(99,102,241,0.28))'
+            filter: 'drop-shadow(0 28px 56px rgba(99,102,241,0.28))',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 5%)',
+            maskImage: 'linear-gradient(to right, transparent 0%, black 5%)'
           }}
         />
       </motion.div>
@@ -258,10 +310,10 @@ function LeftImagePanel() {
    MAIN AUTH PAGE — 40% Form LEFT | 60% Image RIGHT
 ═══════════════════════════════════════════════════════════════ */
 export default function AuthPage({ initialMode }) {
-  const location  = useLocation();
+  const location = useLocation();
   const startMode = initialMode || (location.pathname === '/register' ? 'register' : 'login');
-  const [mode, setMode]     = useState(startMode);
-  const navigate            = useNavigate();
+  const [mode, setMode] = useState(startMode);
+  const navigate = useNavigate();
   const { user, loading, login, register } = useContext(AuthContext);
 
   useEffect(() => {
@@ -278,8 +330,8 @@ export default function AuthPage({ initialMode }) {
   };
 
   /* -- Login state -- */
-  const [loginData,    setLoginData]    = useState({ email: '', password: '' });
-  const [loginError,   setLoginError]   = useState('');
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
   const handleLogin = async (e) => {
@@ -297,18 +349,18 @@ export default function AuthPage({ initialMode }) {
   };
 
   /* -- Register state -- */
-  const [step,       setStep]       = useState(1);
-  const [regDir,     setRegDir]     = useState(1);
+  const [step, setStep] = useState(1);
+  const [regDir, setRegDir] = useState(1);
   const [registered, setRegistered] = useState(false);
-  const [regData,    setRegData]    = useState({
+  const [regData, setRegData] = useState({
     role: 'student', email: '', password: '', confirmPassword: '',
     name: '', contactNumber: '',
     companyName: '', industry: '', websiteUrl: '', captcha: ''
   });
-  const [captchaSvg,     setCaptchaSvg]     = useState('');
+  const [captchaSvg, setCaptchaSvg] = useState('');
   const [captchaLoading, setCaptchaLoading] = useState(false);
-  const [regError,  setRegError]  = useState('');
-  const [regLoading,setRegLoading]= useState(false);
+  const [regError, setRegError] = useState('');
+  const [regLoading, setRegLoading] = useState(false);
 
   const refreshCaptcha = useCallback(async () => {
     setCaptchaLoading(true);
@@ -328,14 +380,14 @@ export default function AuthPage({ initialMode }) {
     setRegError('');
     if (step === 2) {
       if (!regData.email.includes('@')) return setRegError('Please enter a valid email address.');
-      if (regData.password.length < 8)  return setRegError('Password must be at least 8 characters.');
+      if (regData.password.length < 8) return setRegError('Password must be at least 8 characters.');
       if (regData.password !== regData.confirmPassword) return setRegError('Passwords do not match.');
     }
     if (step === 3) {
       if (regData.role === 'student') {
         if (!regData.name || !regData.contactNumber)
           return setRegError('Full name and contact number are required.');
-        
+
         const phoneRegex = /^[789]\d{9}$/;
         if (!phoneRegex.test(regData.contactNumber)) {
           return setRegError('Please enter a valid 10-digit mobile number starting with 7, 8, or 9.');
@@ -379,13 +431,15 @@ export default function AuthPage({ initialMode }) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.6 }}>
           <img src="/avatar-male.png" alt="Placement avatar"
-            style={{ maxWidth: 260, width: '100%',
+            style={{
+              maxWidth: 260, width: '100%',
               mixBlendMode: 'multiply',
-              filter: 'drop-shadow(0 12px 24px rgba(99,102,241,0.22))' }} />
+              filter: 'drop-shadow(0 12px 24px rgba(99,102,241,0.22))'
+            }} />
         </motion.div>
         {/* Desktop: full left panel */}
         <div className="hidden lg:block h-full">
-          <LeftImagePanel />
+          <LeftImagePanel isRegister={mode === 'register'} />
         </div>
       </div>
 
@@ -451,7 +505,7 @@ export default function AuthPage({ initialMode }) {
                 <OTPDisplay email={regData.email}
                   onBack={() => {
                     setRegistered(false); setStep(1);
-                    setRegData({ role:'student', email:'', password:'', confirmPassword:'', name:'', contactNumber:'', companyName:'', industry:'', websiteUrl:'', captcha:'' });
+                    setRegData({ role: 'student', email: '', password: '', confirmPassword: '', name: '', contactNumber: '', companyName: '', industry: '', websiteUrl: '', captcha: '' });
                     switchMode('login');
                   }} />
               </motion.div>
@@ -466,15 +520,15 @@ export default function AuthPage({ initialMode }) {
                 className="text-center text-sm text-slate-400 mt-6 pt-5 border-t border-slate-100">
                 {mode === 'login'
                   ? <>Don't have an account?{' '}
-                      <button onClick={() => switchMode('register')}
-                        className="text-indigo-600 font-bold hover:underline transition-all">
-                        Create account
-                      </button></>
+                    <button onClick={() => switchMode('register')}
+                      className="text-indigo-600 font-bold hover:underline transition-all">
+                      Create account
+                    </button></>
                   : <>Already registered?{' '}
-                      <button onClick={() => switchMode('login')}
-                        className="text-indigo-600 font-bold hover:underline transition-all">
-                        Sign in
-                      </button></>}
+                    <button onClick={() => switchMode('login')}
+                      className="text-indigo-600 font-bold hover:underline transition-all">
+                      Sign in
+                    </button></>}
               </motion.p>
             )}
           </AnimatePresence>
@@ -489,17 +543,17 @@ export default function AuthPage({ initialMode }) {
    LOGIN PANEL
 ═══════════════════════════════════════════════════════════════ */
 function LoginPanel({ data, onChange, onSubmit, error, loading, onSwitch }) {
-  const [fpOpen,  setFpOpen]  = useState(false);
+  const [fpOpen, setFpOpen] = useState(false);
   const [fpEmail, setFpEmail] = useState(data.email || '');
-  const [fpMsg,   setFpMsg]   = useState({ t: '', m: '' });
-  const [fpLoad,  setFpLoad]  = useState(false);
+  const [fpMsg, setFpMsg] = useState({ t: '', m: '' });
+  const [fpLoad, setFpLoad] = useState(false);
 
   const sendReset = async (e) => {
     e.preventDefault(); setFpLoad(true);
     try {
       await api.post('/auth/forgot-password', { email: fpEmail });
       setFpMsg({ t: 'ok', m: 'Reset link sent. Check your inbox!' });
-      setTimeout(() => { setFpOpen(false); setFpMsg({ t:'',m:'' }); }, 3500);
+      setTimeout(() => { setFpOpen(false); setFpMsg({ t: '', m: '' }); }, 3500);
     } catch (err) {
       setFpMsg({ t: 'err', m: err.response?.data?.error || 'Could not send reset link.' });
     } finally { setFpLoad(false); }
@@ -542,7 +596,7 @@ function LoginPanel({ data, onChange, onSubmit, error, loading, onSwitch }) {
               className="overflow-hidden">
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-3">Reset Password</p>
-                {fpMsg.m && <p className={`text-xs font-medium mb-2 ${fpMsg.t==='ok'?'text-emerald-600':'text-red-600'}`}>{fpMsg.m}</p>}
+                {fpMsg.m && <p className={`text-xs font-medium mb-2 ${fpMsg.t === 'ok' ? 'text-emerald-600' : 'text-red-600'}`}>{fpMsg.m}</p>}
                 <div className="flex gap-2">
                   <input type="email" required placeholder="Your email"
                     value={fpEmail} onChange={e => setFpEmail(e.target.value)}
@@ -599,7 +653,7 @@ function RegisterPanel({ step, dir, data, onChange, setData, onNext, onPrev, onS
   const stepAnim = {
     initial: { opacity: 0, x: dir * 22 },
     animate: { opacity: 1, x: 0 },
-    exit:    { opacity: 0, x: dir * -16 },
+    exit: { opacity: 0, x: dir * -16 },
     transition: { duration: 0.3, ease }
   };
 
@@ -607,7 +661,7 @@ function RegisterPanel({ step, dir, data, onChange, setData, onNext, onPrev, onS
     <motion.div variants={fieldContainer} initial="hidden" animate="show">
       <motion.div variants={fieldItem} className="mb-5">
         <h2 className="text-2xl font-bold text-slate-800 tracking-tight mb-1">Create Account</h2>
-        <p className="text-sm text-slate-400">Step {step} of {REG_STEPS.length} — {REG_STEPS[step-1].label}</p>
+        <p className="text-sm text-slate-400">Step {step} of {REG_STEPS.length} — {REG_STEPS[step - 1].label}</p>
       </motion.div>
       <motion.div variants={fieldItem}><StepBar current={step} /></motion.div>
       <Alert type="error" msg={error} />
@@ -619,8 +673,8 @@ function RegisterPanel({ step, dir, data, onChange, setData, onNext, onPrev, onS
             <p className="text-sm font-semibold text-slate-600 mb-4">I am joining as a…</p>
             <div className="grid grid-cols-2 gap-3 mb-6">
               {[
-                { v: 'student', Icon: GraduationCap, l: 'Student',   sub: 'Looking for placement' },
-                { v: 'company', Icon: Building2,     l: 'Recruiter', sub: 'Hiring top talent'      },
+                { v: 'student', Icon: GraduationCap, l: 'Student', sub: 'Looking for placement' },
+                { v: 'company', Icon: Building2, l: 'Recruiter', sub: 'Hiring top talent' },
               ].map(({ v, Icon, l, sub }, i) => (
                 <motion.button key={v} type="button"
                   onClick={() => setData(p => ({ ...p, role: v }))}
@@ -656,7 +710,7 @@ function RegisterPanel({ step, dir, data, onChange, setData, onNext, onPrev, onS
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }}
                   className="flex gap-1.5 items-center">
-                  {[1,2,3,4].map(i => {
+                  {[1, 2, 3, 4].map(i => {
                     const strength = data.password.length >= i * 3;
                     const color = data.password.length < 5 ? '#ef4444' : data.password.length < 9 ? '#f59e0b' : '#10b981';
                     return <motion.div key={i} className="h-1.5 flex-1 rounded-full"
@@ -698,7 +752,7 @@ function RegisterPanel({ step, dir, data, onChange, setData, onNext, onPrev, onS
               <>
                 <FloatInput label="Company Name" value={data.companyName} onChange={onChange('companyName')} required prefix={<Building2 size={15} />} />
                 <FloatSelect label="Industry Sector" value={data.industry} onChange={onChange('industry')} required
-                  options={['Technology','Finance & Banking','Healthcare','Education','Manufacturing','Consulting','E-Commerce','Other']} />
+                  options={['Technology', 'Finance & Banking', 'Healthcare', 'Education', 'Manufacturing', 'Consulting', 'E-Commerce', 'Other']} />
                 <FloatInput label="Company Website (optional)" type="url" value={data.websiteUrl} onChange={onChange('websiteUrl')} prefix={<Globe size={15} />} />
               </>
             )}
@@ -720,9 +774,9 @@ function RegisterPanel({ step, dir, data, onChange, setData, onNext, onPrev, onS
                   whileHover={{ borderColor: '#6366f1' }} transition={{ duration: 0.15 }}>
                   {captchaLoading
                     ? <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="rgba(0,0,0,0.1)" strokeWidth="3"/>
-                        <path d="M12 2a10 10 0 0 1 10 10" stroke="#6366f1" strokeWidth="3" strokeLinecap="round"/>
-                      </svg>
+                      <circle cx="12" cy="12" r="10" stroke="rgba(0,0,0,0.1)" strokeWidth="3" />
+                      <path d="M12 2a10 10 0 0 1 10 10" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" />
+                    </svg>
                     : <div dangerouslySetInnerHTML={{ __html: captchaSvg }} style={{ height: 38 }} />}
                 </motion.div>
                 <motion.button type="button" onClick={refreshCaptcha}
@@ -759,10 +813,10 @@ function UserPlusIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4"/>
-      <line x1="19" y1="8" x2="19" y2="14"/>
-      <line x1="22" y1="11" x2="16" y2="11"/>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="19" y1="8" x2="19" y2="14" />
+      <line x1="22" y1="11" x2="16" y2="11" />
     </svg>
   );
 }
