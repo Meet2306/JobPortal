@@ -28,6 +28,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
 app.use(session({
     secret: process.env.SESSION_SECRET || 'placements-node-secret',
     resave: false,
@@ -38,6 +39,17 @@ app.use(session({
         maxAge: 3600000, // 1 hour
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
+}));
+
+// Catch-all OPTIONS handler for CORS preflight
+app.options('*', cors({
+    origin: [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "https://job-portal-wpzs.vercel.app"
+    ],
+    credentials: true
 }));
 
 
