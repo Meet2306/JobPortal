@@ -32,8 +32,11 @@ app.use(cors({
         "http://localhost:5175",
         "https://job-portal-wpzs.vercel.app"
     ],
-    credentials: true
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -84,17 +87,18 @@ connectDB();
 
 
 // Global 404 handler with CORS headers
-app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.status(404).json({ error: 'Not Found' });
-});
+// app.use((req, res, next) => {
+//     res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
+//     res.setHeader('Access-Control-Allow-Credentials', 'true');
+//     res.status(404).json({ error: 'Not Found' });
+// });
 
-// Global error handler with CORS headers
-app.use((err, req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
-});
+// // Global error handler with CORS headers
+// app.use((err, req, res, next) => {
+//     res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
+//     res.setHeader('Access-Control-Allow-Origin', 'https://localhost:5173');
+//     res.setHeader('Access-Control-Allow-Credentials', 'true');
+//     res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+// });
 
 module.exports = app;
