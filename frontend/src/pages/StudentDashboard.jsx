@@ -101,6 +101,12 @@ const StudentDashboard = () => {
 
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
+
+        if (profile.resumeUrl && profile.resumeUrl.trim().startsWith('file:///')) {
+            setMsg({ type: 'error', text: 'Local files (file:///) cannot be used. Please upload your resume online (e.g. Google Drive) and paste the public link here.' });
+            return;
+        }
+
         try {
             await api.put('/student/profile', profile);
             setMsg({ type: 'success', text: 'Profile updated successfully!' });
@@ -459,7 +465,36 @@ const StudentDashboard = () => {
                                                     <div className="form-group"><label className="form-label">Technical Skills (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.technical?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, technical: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="React, Node.js, MongoDB..." /></div>
                                                     <div className="form-group"><label className="form-label">Soft Skills (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.soft?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, soft: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="Leadership, Communication..." /></div>
                                                     <div className="form-group"><label className="form-label">Tools (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.tools?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, tools: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="VS Code, Docker, Postman..." /></div>
-                                                    <div className="form-group"><label className="form-label">Resume URL</label><input type="url" className="form-control" value={profile.resumeUrl} onChange={e => setProfile({...profile, resumeUrl: e.target.value})} disabled={isLocked} placeholder="https://drive.google.com/..." /></div>
+                                                    <div>
+                                                        <label className="form-label">Resume (URL or Local File)</label>
+                                                        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                                                            <input type="url" className="form-control" style={{ flex: 1 }} value={profile.resumeUrl} onChange={e => setProfile({...profile, resumeUrl: e.target.value})} disabled={isLocked} placeholder="Paste link or click Upload ->" />
+                                                            <label className="btn btn-outline" style={{ cursor: isLocked ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', margin: 0, padding: '0 12px', fontSize: 13 }}>
+                                                                Upload PDF
+                                                                <input 
+                                                                    type="file" 
+                                                                    accept=".pdf,.doc,.docx" 
+                                                                    style={{ display: 'none' }} 
+                                                                    disabled={isLocked}
+                                                                    onChange={async (e) => {
+                                                                        if (!e.target.files[0]) return;
+                                                                        const fd = new FormData();
+                                                                        fd.append('resume', e.target.files[0]);
+                                                                        try {
+                                                                            const { data } = await api.post('/student/upload-resume', fd, { headers: { 'Content-Type': 'multipart/form-data' }});
+                                                                            setProfile({...profile, resumeUrl: data.url});
+                                                                            setMsg({ type: 'success', text: 'Resume file uploaded successfully!' });
+                                                                        } catch(err) {
+                                                                            setMsg({ type: 'error', text: 'Failed to upload resume file' });
+                                                                        }
+                                                                    }} 
+                                                                />
+                                                            </label>
+                                                        </div>
+                                                        {profile.resumeUrl && profile.resumeUrl.trim().startsWith('file:///') && (
+                                                            <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 4 }}>⚠️ Error: You pasted a local path. Click "Upload PDF" instead!</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                             <div style={{ marginTop: 30, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>

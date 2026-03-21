@@ -4,13 +4,15 @@ import { AuthContext } from '../context/AuthContext';
 import {
     LogOut, Building2, PlusCircle, Briefcase, Users,
     BarChart3, Bell, AlertCircle, CheckCircle, Globe,
-    Mail, Phone, TrendingUp, FileText, XCircle, Clock
+    Mail, Phone, TrendingUp, FileText, XCircle, Clock, Bot
 } from 'lucide-react';
 import {
     BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, LineChart, Line
 } from 'recharts';
+import ATSEvaluationModal from '../components/ATSEvaluationModal';
+
 
 const COLORS = ['#4F46E5', '#059669', '#D97706', '#DC2626', '#7C3AED', '#0891B2'];
 
@@ -53,6 +55,7 @@ const CompanyDashboard = () => {
     const [applicants, setApplicants] = useState([]);
     const [selectedJob, setSelectedJob] = useState(null);
     const [msg, setMsg] = useState({ type: '', text: '' });
+    const [evaluatingStudent, setEvaluatingStudent] = useState(null);
     const [new_job, setNewJob] = useState({ 
         title: '', 
         package: '',
@@ -527,9 +530,20 @@ const CompanyDashboard = () => {
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        {app.student?.resumeUrl
-                                                            ? <a href={app.student.resumeUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">CV</a>
-                                                            : '—'}
+                                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                                            {app.student?.resumeUrl ? (
+                                                                <a href={app.student.resumeUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">CV</a>
+                                                            ) : (
+                                                                <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                                                            )}
+                                                            <button 
+                                                                onClick={() => setEvaluatingStudent(app.student)} 
+                                                                className="btn btn-sm" 
+                                                                style={{ background: 'var(--purple-soft)', color: 'var(--purple)', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                                                            >
+                                                                <Bot size={14} /> AI Scan
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                     <td>
                                                         <select className="form-select" style={{ height: 32, fontSize: 11 }} value={app.status} onChange={e => updateApplicantStatus(app._id, e.target.value)}>
@@ -549,6 +563,13 @@ const CompanyDashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {evaluatingStudent && (
+                <ATSEvaluationModal 
+                    student={evaluatingStudent} 
+                    onClose={() => setEvaluatingStudent(null)} 
+                />
+            )}
         </div>
     );
 };

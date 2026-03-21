@@ -221,3 +221,15 @@ exports.uploadPhoto = async (req, res) => {
         res.status(500).json({ error: 'Upload failed' });
     }
 };
+
+exports.uploadResume = async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        const profile = await StudentProfile.findOne({ user: req.user.id });
+        profile.resumeUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+        await profile.save();
+        res.json({ message: 'Resume uploaded!', url: profile.resumeUrl });
+    } catch (err) {
+        res.status(500).json({ error: 'Upload failed' });
+    }
+};

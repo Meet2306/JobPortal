@@ -13,6 +13,7 @@ const authRoutes = require('./routes/authRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const companyRoutes = require('./routes/companyRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const atsRoutes = require('./routes/atsRoutes');
 
 const app = express();
 
@@ -21,6 +22,7 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
+app.use('/uploads', express.static(uploadsDir));
 app.use(helmet({
     crossOriginResourcePolicy: false // FIX: allow cross-origin requests
 }));
@@ -65,6 +67,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/company', companyRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ats', atsRoutes);
 
 // DB & Server startup
 const PORT = process.env.PORT || 5000;
