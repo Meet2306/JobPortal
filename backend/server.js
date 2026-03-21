@@ -29,8 +29,7 @@ app.use(cors({
     origin: [
         "http://localhost:5173",
         "http://localhost:5174",
-        "http://localhost:5175",
-        "https://job-portal-wpzs.vercel.app"
+        "http://localhost:5175"
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -45,19 +44,16 @@ let sessionOptions = {
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: false, // removed production condition
         httpOnly: true,
         maxAge: 3600000, // 1 hour
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-    }
-};
-
-if (process.env.NODE_ENV === 'production') {
-    sessionOptions.store = MongoStore.create({
+        sameSite: 'lax' // lax for local
+    },
+    store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
         ttl: 3600 // 1 hour
-    });
-}
+    })
+};
 
 app.use(session(sessionOptions));
 
@@ -80,22 +76,12 @@ const connectDB = async () => {
     console.log("MongoDB connected");
 };
 
-connectDB();
-
-
-// Global 404 handler with CORS headers
-// app.use((req, res, next) => {
-//     res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
-//     res.setHeader('Access-Control-Allow-Credentials', 'true');
-//     res.status(404).json({ error: 'Not Found' });
-// });
-
-// // Global error handler with CORS headers
-// app.use((err, req, res, next) => {
-//     res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
-//     res.setHeader('Access-Control-Allow-Origin', 'https://localhost:5173');
-//     res.setHeader('Access-Control-Allow-Credentials', 'true');
-//     res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
-// });
+connectDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}).catch(err => {
+    console.error("Failed to connect to MongoDB", err);
+});
 
 module.exports = app;

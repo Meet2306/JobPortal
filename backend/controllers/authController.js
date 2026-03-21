@@ -1,14 +1,6 @@
 // Helper to get frontend URL
 const getFrontendUrl = () => {
-    if (process.env.NODE_ENV === 'production') {
-        return process.env.FRONTEND_URL || 'https://job-portal-wpzs.vercel.app';
-    }
-    return 'http://localhost:5173';
-};
-// Helper to set CORS headers for Vercel
-const setCorsHeaders = (res) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://job-portal-wpzs.vercel.app');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    return process.env.FRONTEND_URL || 'http://localhost:5173';
 };
 const User = require('../models/User');
 const StudentProfile = require('../models/StudentProfile');
@@ -46,7 +38,7 @@ const loginSchema = Joi.object({
 });
 
 exports.getCaptcha = (req, res) => {
-        setCorsHeaders(res);
+
     try {
         const captcha = svgCaptcha.create({
             size: 6,
@@ -65,15 +57,15 @@ exports.getCaptcha = (req, res) => {
 };
 
 exports.register = async (req, res) => {
-        setCorsHeaders(res);
+
     try {
         console.log('Incoming Registration Request:', req.body);
-        
+
         // 1. Verify Captcha
         if (!req.body.captcha || req.body.captcha.toLowerCase() !== req.session.captcha) {
             return res.status(400).json({ error: 'Invalid captcha code' });
         }
-        
+
         // Clear captcha session after verification
         req.session.captcha = null;
 
@@ -83,8 +75,8 @@ exports.register = async (req, res) => {
             return res.status(400).json({ error: error.details[0].message });
         }
 
-        const { 
-            email, password, role, 
+        const {
+            email, password, role,
             name, contactNumber,
             companyName, industry, websiteUrl, hrContactName, hrContactEmail, hrContactNumber, description
         } = req.body;
@@ -102,23 +94,23 @@ exports.register = async (req, res) => {
         const isVerified = role === 'admin';
         const emailVerified = role === 'admin'; // Admin is pre-verified usually, or we can force it too.
 
-        const newUser = new User({ 
-            email, 
-            password: hashedPassword, 
-            role, 
+        const newUser = new User({
+            email,
+            password: hashedPassword,
+            role,
             isVerified,
             emailVerified: emailVerified,
             emailVerificationToken: verificationToken
         });
         await newUser.save();
 
-            const verifyUrl = `${getFrontendUrl()}/verify-email/${verificationToken}`;
+        const verifyUrl = `${getFrontendUrl()}/verify-email/${verificationToken}`;
 
         // Create profiles with provided data
         if (role === 'student') {
-            await new StudentProfile({ 
-                user: newUser._id, 
-                name, 
+            await new StudentProfile({
+                user: newUser._id,
+                name,
                 contactNumber,
                 emailAddress: email
             }).save();
@@ -129,8 +121,8 @@ exports.register = async (req, res) => {
                 <p>If the button doesn't work, copy and paste this link: ${verifyUrl}</p>
             `);
         } else if (role === 'company') {
-            await new CompanyProfile({ 
-                user: newUser._id, 
+            await new CompanyProfile({
+                user: newUser._id,
                 companyName,
                 industry,
                 websiteUrl,
@@ -155,7 +147,7 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-        setCorsHeaders(res);
+
     try {
         const { error } = loginSchema.validate(req.body);
         if (error) return res.status(400).json({ error: error.details[0].message });
@@ -180,8 +172,8 @@ exports.login = async (req, res) => {
         // Set HTTP-Only Cookie
         res.cookie('token', token, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
+            secure: false,
+            sameSite: 'lax',
             maxAge: 24 * 60 * 60 * 1000
         });
 
@@ -192,13 +184,13 @@ exports.login = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
-        setCorsHeaders(res);
+
     res.clearCookie('token');
     res.json({ message: 'Logged out successfully' });
 };
 
 exports.me = async (req, res) => {
-        setCorsHeaders(res);
+
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
 
     const user = await User.findById(req.user.id).select('-password');
@@ -206,7 +198,7 @@ exports.me = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
-        setCorsHeaders(res);
+
     try {
         const user = await User.findOne({ email: req.body.email });
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -216,7 +208,7 @@ exports.forgotPassword = async (req, res) => {
         user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
         await user.save();
 
-            const resetUrl = `${getFrontendUrl()}/reset-password/${token}`;
+        const resetUrl = `${getFrontendUrl()}/reset-password/${token}`;
         await sendEmail(user.email, 'Password Reset Request', `
             <h3>Placement Portal Password Reset</h3>
             <p>You requested a password reset. Please click the link below to set a new password:</p>
@@ -231,7 +223,7 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
-        setCorsHeaders(res);
+
     try {
         const user = await User.findOne({
             resetPasswordToken: req.params.token,
@@ -257,7 +249,7 @@ exports.resetPassword = async (req, res) => {
 };
 
 exports.verifyEmail = async (req, res) => {
-        setCorsHeaders(res);
+
     try {
         const { token } = req.params;
         const user = await User.findOne({ emailVerificationToken: token });

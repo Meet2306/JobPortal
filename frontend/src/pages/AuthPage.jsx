@@ -219,7 +219,7 @@ function OTPDisplay({ email, onBack }) {
 /* ═══════════════════════════════════════════════════════════════
    RIGHT PANEL — Avatar Image (slides in from right)
 ═══════════════════════════════════════════════════════════════ */
-function LeftImagePanel({isRegister}) {
+function LeftImagePanel({ isRegister }) {
   return (
     <div className="hidden lg:flex flex-col items-center justify-center h-full relative overflow-hidden"
       style={{ background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 40%, #ede9fe 100%)' }}>
@@ -231,11 +231,44 @@ function LeftImagePanel({isRegister}) {
       }} />
       <div style={{
         position: 'absolute', bottom: '-40px', right: '-40px', width: 220, height: 220,
-        borderRadius: '50%', background: 'rgba(139,92,246,0.07)', pointerEvents: 'none'
+        borderRadius: '50%', background: 'rgba(139,92,246,0.08)', pointerEvents: 'none'
       }} />
       <div style={{
         position: 'absolute', top: '35%', right: '8px', width: 110, height: 110,
-        borderRadius: '50%', background: 'rgba(59,130,246,0.055)', pointerEvents: 'none'
+        borderRadius: '50%', background: 'rgba(50,50,240,0.05)', pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '38%', left: '35%', width: 110, height: 110,
+        borderRadius: '50%', background: 'rgba(50,50,240,0.07)', pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '32%', left: '43%', width: 110, height: 110,
+        borderRadius: '50%', background: 'rgba(50,10,247,0.04)', pointerEvents: 'none'
+      }} />
+      {/* <div style={{
+        position: 'absolute', top: '-10%', right: '25%', width: 110, height: 110,
+        borderRadius: '50%', background: 'rgba(59,130,246,0.06)', pointerEvents: 'none'
+      }} /> */}
+      {/* time pass */}
+      {/* <div style={{
+        position: 'absolute', bottom: '-12%', right: '-8%', width: 450, height: 450,
+        borderRadius: '50%', background: 'rgba(45,45,450,0.09)', pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '-10%', left: '35%', width: 350, height: 350,
+        borderRadius: '50%', background: 'rgba(50,50,240,0.09)', pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '-9%', left: '14%', width: 250, height: 250,
+        borderRadius: '50%', background: 'rgba(50,10,247,0.04)', pointerEvents: 'none'
+      }} /> */}
+      <div style={{
+        position: 'absolute', bottom: '-6%', left: '3%', width: 150, height: 150,
+        borderRadius: '50%', background: 'rgba(45,45,450,0.07)', pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '-6%', left: '-5%', width: 100, height: 100,
+        borderRadius: '50%', background: 'rgba(54,70,246,0.1)', pointerEvents: 'none'
       }} />
       <motion.div
         initial={{ x: -80, opacity: 0 }}
@@ -250,34 +283,43 @@ function LeftImagePanel({isRegister}) {
           backdropFilter: "blur(10px)",
           padding: "28px 32px",
           borderRadius: "16px",
-          maxWidth: "400px",
+          maxWidth: "405px",
           boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-          border: "1px solid rgba(255,255,255,0.4)"
+          border: "1px solid rgba(255,255,255,0.4)",
+          fontFamily: " 'Roboto', 'Poppins', 'Montserrat', 'Raleway', sans-serif",
         }}
       >
         <h2 style={{
-          fontSize: "28px",
-          fontWeight: "700",
-          color: "#1e293b",
-          marginBottom: "10px"
-        }}>
-          {isRegister ? "Create Your Account 💼" : "Welcome Back 👋"}
+          fontSize: "35px",
+          fontWeight: "10000",
+          background: "linear-gradient(-180deg, #1e293b,  rgba(50,50,240,0.7))",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "#1e293b",
+          lineHeight: "1.2",
+          marginBottom: "14px",
+          letterSpacing: "0.5px"
+        }}><strong>
+          {isRegister ? "Create Your Account" : "Welcome Back"}
+          </strong>
         </h2>
 
         <p style={{
-          fontSize: "14px",
-          color: "#475569",
-          lineHeight: "1.6"
+          fontSize: "15px",
+          color: "#1e293b",
+          lineHeight: "1.8",
+          fontWeight: 500,
+          letterSpacing: "0.3px",
+          fontFamily: "'Poppins', 'Montserrat', 'Raleway', 'Roboto', 'Nunito', 'Inter', sans-serif",
         }}>
           {isRegister ? (
             <>
-              Start your placement journey today.<br />
-              Create an account and connect with top companies.
+              Join the official placement platform.<br />
+              Empowering students, companies, and TPOs to connect and grow together.
             </>
           ) : (
             <>
-              Your career starts here.<br />
-              Access your placement dashboard and discover new opportunities.
+              Your gateway to campus placements.<br />
+              Connecting students, companies, and TPOs on one platform.
             </>
           )}
         </p>
