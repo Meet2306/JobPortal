@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/auth');
 const { roleMiddleware, verifiedMiddleware } = require('../middlewares/role');
 const { getProfile, updateProfile, getEligibleJobs, applyForJob, getApplications, requestEditPermission, uploadPhoto, uploadResume } = require('../controllers/studentController');
+const { createInterview, submitAnswer, getInterviews, getInterviewById } = require('../controllers/mockInterviewController');
 const multer = require('multer');
 const path = require('path');
 
@@ -35,5 +36,11 @@ router.use(verifiedMiddleware); // Verify lock
 router.get('/jobs/eligible', getEligibleJobs);
 router.post('/jobs/:jobId/apply', applyForJob);
 router.get('/applications', getApplications);
+
+// Mock Interview Routes
+router.post('/mock-interview', createInterview);
+router.get('/mock-interview', getInterviews);
+router.get('/mock-interview/:id', getInterviewById);
+router.post('/mock-interview/:id/question/:questionId/answer', submitAnswer);
 
 module.exports = router;

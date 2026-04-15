@@ -25,7 +25,15 @@ const userSchema = new mongoose.Schema({
   },
   emailVerificationToken: String,
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  loginAttempts: {
+    type: Number,
+    required: true,
+    default: 0
+  },
+  lockUntil: {
+    type: Date
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

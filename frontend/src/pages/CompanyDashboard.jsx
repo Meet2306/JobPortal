@@ -98,6 +98,24 @@ const CompanyDashboard = () => {
 
     const updateProfile = async (e) => {
         e.preventDefault();
+
+        // ── Validation: Check if all profile fields are full! ──
+        const reqFields = [
+            { key: 'companyName', label: 'Company Name' },
+            { key: 'industry', label: 'Industry' },
+            { key: 'websiteUrl', label: 'Website URL' },
+            { key: 'description', label: 'About Company' },
+            { key: 'hrContactName', label: 'HR Name' },
+            { key: 'hrContactEmail', label: 'HR Email' },
+            { key: 'hrContactNumber', label: 'HR Phone' }
+        ];
+
+        for (let field of reqFields) {
+            if (!profile[field.key] || profile[field.key].toString().trim() === '') {
+                setMsg({ type: 'error', text: `Please fill out your ${field.label}` });
+                return;
+            }
+        }
         try { await api.put('/company/profile', profile); setMsg({ type: 'success', text: 'Profile updated!' }); fetchProfile(); }
         catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Update failed' }); }
     };

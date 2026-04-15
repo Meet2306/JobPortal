@@ -156,8 +156,30 @@ exports.login = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) return res.status(400).json({ error: 'Invalid email or password' });
 
+        // Check for account lockout
+        if (user.lockUntil && user.lockUntil > Date.now()) {
+            const minutesLeft = Math.ceil((user.lockUntil - Date.now()) / 60000);
+            return res.status(403).json({ error: `Account locked due to too many incorrect attempts. Please try again in ${minutesLeft} minute(s).` });
+        }
+
         const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) return res.status(400).json({ error: 'Invalid email or password' });
+        if (!validPassword) {
+            user.loginAttempts = (user.loginAttempts || 0) + 1;
+            if (user.loginAttempts >= 3) {
+                user.lockUntil = Date.now() + 7 * 60 * 1000; // 7 minutes
+                await user.save();
+                return res.status(403).json({ error: 'Too many incorrect attempts. Account blocked for 7 minutes.' });
+            }
+            await user.save();
+            return res.status(400).json({ error: `Invalid email or password. Attempt ${user.loginAttempts} of 3.` });
+        }
+
+        // Successful login, reset failed attempts
+        if (user.loginAttempts > 0 || user.lockUntil) {
+            user.loginAttempts = 0;
+            user.lockUntil = undefined;
+            await user.save();
+        }
 
         if (!user.emailVerified) {
             return res.status(403).json({ error: 'Please verify your email before logging in. Check your inbox for the verification link.' });

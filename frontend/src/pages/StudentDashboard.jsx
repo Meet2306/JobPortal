@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
+import MockInterview from '../components/MockInterview';
 import {
     LogOut, Briefcase, FileText, User, Settings, Bell, TrendingUp,
     CheckCircle2, AlertCircle, MapPin, ChevronRight, BarChart2,
-    GraduationCap, Award, BookOpen, Clock
+    GraduationCap, Award, BookOpen, Clock, Brain
 } from 'lucide-react';
 import {
     LineChart, Line, AreaChart, Area, BarChart, Bar,
@@ -50,6 +51,7 @@ const NAV = [
     { key: 'overview', label: 'Overview', icon: BarChart2 },
     { key: 'jobs', label: 'Job Openings', icon: Briefcase },
     { key: 'applications', label: 'My Applications', icon: FileText },
+    { key: 'mock-interview', label: 'Mock Interview (AI)', icon: Brain },
     { key: 'profile', label: 'My Profile', icon: User },
     { key: 'settings', label: 'Settings', icon: Settings },
 ];
@@ -102,7 +104,48 @@ const StudentDashboard = () => {
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
 
+        // ── Validation: Check if all profile fields are full! ──
+        const reqBasic = ['name', 'contactNumber', 'gender', 'dateOfBirth', 'linkedinUrl'];
+        for (let f of reqBasic) {
+            if (!profile[f]) {
+                setProfileStep(1);
+                setMsg({ type: 'error', text: `Personal Details: Please fill out your ${f.replace(/([A-Z])/g, ' $1').toLowerCase()}` });
+                return;
+            }
+        }
+        if (!profile.address?.city || !profile.address?.state) {
+            setProfileStep(1);
+            setMsg({ type: 'error', text: 'Personal Details: Please provide your city and state' });
+            return;
+        }
+
+        const reqEdu = ['collegeName', 'degree', 'branch', 'cgpa', 'startYear', 'endYear', 'tenthPercentage', 'twelfthPercentage'];
+        for (let f of reqEdu) {
+            if (!profile.education?.[f] && profile.education?.[f] !== 0) {
+                setProfileStep(2);
+                setMsg({ type: 'error', text: `Education: Please fill out your ${f.replace(/([A-Z])/g, ' $1').toLowerCase()}` });
+                return;
+            }
+        }
+
+        if (!profile.skills?.technical?.length) {
+            setProfileStep(3);
+            setMsg({ type: 'error', text: 'Skills: Please list at least one technical skill' });
+            return;
+        }
+        if (!profile.skills?.soft?.length) {
+            setProfileStep(3);
+            setMsg({ type: 'error', text: 'Skills: Please list at least one soft skill' });
+            return;
+        }
+        if (!profile.resumeUrl) {
+            setProfileStep(3);
+            setMsg({ type: 'error', text: 'Skills: Please provide a valid Resume URL or upload a file' });
+            return;
+        }
+
         if (profile.resumeUrl && profile.resumeUrl.trim().startsWith('file:///')) {
+            setProfileStep(3);
             setMsg({ type: 'error', text: 'Local files (file:///) cannot be used. Please upload your resume online (e.g. Google Drive) and paste the public link here.' });
             return;
         }
@@ -181,7 +224,7 @@ const StudentDashboard = () => {
 
                     {NAV.map(item => {
                         const Icon = item.icon;
-                        const disabled = !user.isVerified && (item.key === 'jobs' || item.key === 'applications');
+                        const disabled = !user.isVerified && (item.key === 'jobs' || item.key === 'applications' || item.key === 'mock-interview');
                         return (
                             <button
                                 key={item.key}
@@ -249,7 +292,7 @@ const StudentDashboard = () => {
                 </nav>
 
                 <div className="page-content">
-                    {!user.isVerified && (activeNav === 'jobs' || activeNav === 'applications') ? (
+                    {!user.isVerified && (activeNav === 'jobs' || activeNav === 'applications' || activeNav === 'mock-interview') ? (
                         <div className="animate-scale-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
                             <div className="card" style={{ maxWidth: 420, textAlign: 'center', padding: '48px 40px' }}>
                                 <div style={{ width: 60, height: 60, background: 'var(--warning-soft)', borderRadius: 'var(--r-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
@@ -400,6 +443,9 @@ const StudentDashboard = () => {
                                     </div>
                                 </>
                             )}
+
+                            {/* ── MOCK INTERVIEW ── */}
+                            {activeNav === 'mock-interview' && <MockInterview />}
 
                             {/* ── PROFILE ── */}
                             {activeNav === 'profile' && (
