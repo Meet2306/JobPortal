@@ -2,10 +2,11 @@ import React, { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import MockInterview from '../components/MockInterview';
+import ATSEvaluationModal from '../components/ATSEvaluationModal';
 import {
     LogOut, Briefcase, FileText, User, Settings, Bell, TrendingUp,
     CheckCircle2, AlertCircle, MapPin, ChevronRight, BarChart2,
-    GraduationCap, Award, BookOpen, Clock, Brain
+    GraduationCap, Award, BookOpen, Clock, Brain, Bot
 } from 'lucide-react';
 import {
     LineChart, Line, AreaChart, Area, BarChart, Bar,
@@ -46,14 +47,13 @@ const CustomTooltip = ({ active, payload, label }) => {
     );
 };
 
-/* ── Sidebar Nav Items ── */
 const NAV = [
     { key: 'overview', label: 'Overview', icon: BarChart2 },
     { key: 'jobs', label: 'Job Openings', icon: Briefcase },
     { key: 'applications', label: 'My Applications', icon: FileText },
     { key: 'mock-interview', label: 'Mock Interview (AI)', icon: Brain },
+    { key: 'resume-scanner', label: 'AI Resume Scanner', icon: Bot },
     { key: 'profile', label: 'My Profile', icon: User },
-    { key: 'settings', label: 'Settings', icon: Settings },
 ];
 
 const StudentDashboard = () => {
@@ -78,6 +78,7 @@ const StudentDashboard = () => {
     const [msg, setMsg] = useState({ type: '', text: '' });
     const [passMsg, setPassMsg] = useState('');
     const [search, setSearch] = useState({ location: '', skill: '' });
+    const [evaluatingStudent, setEvaluatingStudent] = useState(false);
 
     useEffect(() => {
         fetchProfile();
@@ -447,9 +448,44 @@ const StudentDashboard = () => {
                             {/* ── MOCK INTERVIEW ── */}
                             {activeNav === 'mock-interview' && <MockInterview />}
 
+                            {/* ── AI RESUME SCANNER ── */}
+                            {activeNav === 'resume-scanner' && (
+                                <div className="card animate-fade-up">
+                                    <div className="card-header">
+                                        <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <Bot color="var(--purple)" size={20} />
+                                            AI Resume Scanner
+                                        </div>
+                                    </div>
+                                    <div style={{ padding: '0 20px 20px', color: 'var(--text-sub)', fontSize: 14 }}>
+                                        <p style={{ marginBottom: 16, lineHeight: 1.6 }}>
+                                            We will securely analyze your profile data and your uploaded resume using advanced AI to provide an ATS score, identify missing skills, and suggest actionable improvements tailored to entry-level / intern roles. 
+                                            This will boost your chances of getting shortlisted.
+                                        </p>
+                                        
+                                        {!profile.resumeUrl ? (
+                                            <div className="alert alert-warning" style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 0 }}>
+                                                <AlertCircle size={20} />
+                                                <span>You must upload a resume or provide a valid Google Drive link in your <b>Profile</b> section before using the AI Scanner.</span>
+                                            </div>
+                                        ) : (
+                                            <button 
+                                                className="btn btn-primary"
+                                                onClick={() => setEvaluatingStudent(true)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--purple)', borderColor: 'var(--purple)' }}
+                                            >
+                                                <Bot size={18} />
+                                                Analyze My Resume Now
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* ── PROFILE ── */}
                             {activeNav === 'profile' && (
-                                <div style={{ maxWidth: 800 }}>
+                                <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                    <div style={{ flex: '1 1 500px', maxWidth: 800 }}>
                                     <div className="page-header">
                                         <h1>Professional Profile</h1>
                                         <p>Information used for job eligibility and recruiter visibility</p>
@@ -550,11 +586,7 @@ const StudentDashboard = () => {
                                         </form>
                                     </div>
                                 </div>
-                            )}
-
-                            {activeNav === 'settings' && (
-                                <div style={{ maxWidth: 480 }}>
-                                    <div className="page-header"><h1>Settings</h1></div>
+                                <div style={{ flex: '0 0 320px' }}>
                                     <div className="card">
                                         <div className="card-title" style={{ marginBottom: 16 }}>Change Password</div>
                                         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Send reset link to your registered email.</p>
@@ -562,12 +594,20 @@ const StudentDashboard = () => {
                                         {passMsg && <div className="alert alert-success" style={{ marginTop: 16 }}>{passMsg}</div>}
                                     </div>
                                 </div>
+                            </div>
                             )}
 
                         </div>
                     )}
                 </div>
             </div>
+
+            {evaluatingStudent && (
+                <ATSEvaluationModal 
+                    student={profile} 
+                    onClose={() => setEvaluatingStudent(false)} 
+                />
+            )}
         </div>
     );
 };

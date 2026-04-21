@@ -90,7 +90,7 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                                     <h3 style={{ fontSize: 18, fontWeight: 800, color: result.ats_compatibility?.is_ats_friendly ? '#166534' : '#991B1B', marginBottom: 8 }}>
                                         ATS Friendly: {result.ats_compatibility?.is_ats_friendly ? 'Yes' : 'No'}
                                     </h3>
-                                    {result.ats_compatibility?.issues?.length > 0 && (
+                                    {Array.isArray(result.ats_compatibility?.issues) && result.ats_compatibility.issues.length > 0 && (
                                         <ul style={{ paddingLeft: '20px', margin: 0, color: result.ats_compatibility?.is_ats_friendly ? '#15803D' : '#B91C1C', fontSize: 13 }}>
                                             {result.ats_compatibility.issues.map((issue, i) => <li key={i} style={{marginBottom: 4}}>{issue}</li>)}
                                         </ul>
@@ -103,17 +103,17 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                                 <div>
                                     <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-sub)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircle2 size={16} color="var(--primary)" /> Technical Skills</h4>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                        {result.key_skills?.technical?.map((skill, i) => (
+                                        {Array.isArray(result.key_skills?.technical) ? result.key_skills.technical.map((skill, i) => (
                                             <span key={i} className="badge badge-primary" style={{ padding: '6px 12px' }}>{skill}</span>
-                                        )) || <span className="text-muted">None extracted</span>}
+                                        )) : <span className="text-muted">None extracted</span>}
                                     </div>
                                 </div>
                                 <div>
                                     <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-sub)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircle2 size={16} color="var(--purple)" /> Soft Skills</h4>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                        {result.key_skills?.soft?.map((skill, i) => (
+                                        {Array.isArray(result.key_skills?.soft) ? result.key_skills.soft.map((skill, i) => (
                                             <span key={i} className="badge badge-purple" style={{ padding: '6px 12px' }}>{skill}</span>
-                                        )) || <span className="text-muted">None extracted</span>}
+                                        )) : <span className="text-muted">None extracted</span>}
                                     </div>
                                 </div>
                             </div>
@@ -121,9 +121,9 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                             <div>
                                 <h4 style={{ fontSize: 14, fontWeight: 700, color: '#991B1B', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><AlertCircle size={16} color="#DC2626" /> Missing Important Keywords</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                    {result.key_skills?.missing_important_keywords?.map((skill, i) => (
+                                    {Array.isArray(result.key_skills?.missing_important_keywords) ? result.key_skills.missing_important_keywords.map((skill, i) => (
                                         <span key={i} className="badge" style={{ padding: '6px 12px', background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECACA' }}>{skill}</span>
-                                    )) || <span className="text-muted" style={{fontSize: 14}}>None</span>}
+                                    )) : <span className="text-muted" style={{fontSize: 14}}>None</span>}
                                 </div>
                             </div>
 
@@ -132,13 +132,13 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                                 <div style={{ background: '#F0FDF4', padding: '20px', borderRadius: 'var(--r-lg)', border: '1px solid #BBF7D0' }}>
                                     <h4 style={{ fontSize: 14, fontWeight: 700, color: '#166534', marginBottom: 12 }}>Key Strengths</h4>
                                     <ul style={{ paddingLeft: '20px', margin: 0, color: '#15803D', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                        {result.strengths?.map((str, i) => <li key={i}>{str}</li>)}
+                                        {Array.isArray(result.strengths) ? result.strengths.map((str, i) => <li key={i}>{str}</li>) : null}
                                     </ul>
                                 </div>
                                 <div style={{ background: '#FEF2F2', padding: '20px', borderRadius: 'var(--r-lg)', border: '1px solid #FECACA' }}>
                                     <h4 style={{ fontSize: 14, fontWeight: 700, color: '#991B1B', marginBottom: 12 }}>Honest Weaknesses (Missing Areas)</h4>
                                     <ul style={{ paddingLeft: '20px', margin: 0, color: '#B91C1C', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                        {result.weaknesses?.map((wk, i) => <li key={i}>{wk}</li>) || result.weaknesses_or_missing_sections?.map((wk, i) => <li key={i}>{wk}</li>)}
+                                        {Array.isArray(result.weaknesses) ? result.weaknesses.map((wk, i) => <li key={i}>{wk}</li>) : Array.isArray(result.weaknesses_or_missing_sections) ? result.weaknesses_or_missing_sections.map((wk, i) => <li key={i}>{wk}</li>) : null}
                                     </ul>
                                 </div>
                             </div>
@@ -151,7 +151,7 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                                         {Object.entries(result.section_wise_review).map(([section, data]) => (
                                             <div key={section} style={{ background: '#F8FAFC', padding: '16px', borderRadius: 'var(--r-md)', border: '1px solid #E2E8F0' }}>
                                                 <h5 style={{ textTransform: 'capitalize', fontSize: 14, fontWeight: 700, color: '#334155', margin: '0 0 8px 0' }}>{section}</h5>
-                                                {data?.issues?.length > 0 && (
+                                                {Array.isArray(data?.issues) && data.issues.length > 0 && (
                                                     <div style={{ marginBottom: 8 }}>
                                                         <strong style={{ fontSize: 13, color: '#991B1B' }}>Issues:</strong>
                                                         <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#475569' }}>
@@ -159,7 +159,7 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                                                         </ul>
                                                     </div>
                                                 )}
-                                                {data?.suggestions?.length > 0 && (
+                                                {Array.isArray(data?.suggestions) && data.suggestions.length > 0 && (
                                                     <div>
                                                         <strong style={{ fontSize: 13, color: '#047857' }}>Suggestions:</strong>
                                                         <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#475569' }}>
@@ -174,7 +174,7 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                             )}
 
                             {/* Project Analysis & Bullet Point Improvements */}
-                            {result.bullet_point_improvements?.length > 0 && (
+                            {Array.isArray(result.bullet_point_improvements) && result.bullet_point_improvements.length > 0 && (
                                 <div>
                                     <h4 style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 12 }}>Bullet Point Improvements</h4>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -193,7 +193,7 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                                     <h4 style={{ fontSize: 16, fontWeight: 700, color: '#0369A1', marginBottom: 12 }}>Project Analysis</h4>
                                     <p style={{ fontSize: 14, color: '#0C4A6E', margin: '0 0 12px 0' }}>{result.project_analysis.feedback}</p>
                                     <ul style={{ paddingLeft: '20px', margin: 0, color: '#0284C7', fontSize: 14 }}>
-                                        {result.project_analysis.suggestions?.map((s, i) => <li key={i} style={{marginBottom: 4}}>{s}</li>)}
+                                        {Array.isArray(result.project_analysis.suggestions) && result.project_analysis.suggestions.map((s, i) => <li key={i} style={{marginBottom: 4}}>{s}</li>)}
                                     </ul>
                                 </div>
                             )}
@@ -202,7 +202,7 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                             <div>
                                 <h4 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-sub)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><Briefcase size={16} color="var(--warning)" /> Recommended Job Roles</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                    {result.suitable_job_roles?.map((role, i) => (
+                                    {Array.isArray(result.suitable_job_roles) && result.suitable_job_roles.map((role, i) => (
                                         <span key={i} className="badge badge-warning" style={{ padding: '6px 12px', fontSize: 13, fontWeight: 600 }}>{role}</span>
                                     ))}
                                 </div>
@@ -212,7 +212,7 @@ const ATSEvaluationModal = ({ student, onClose }) => {
                             <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: 'var(--r-lg)', border: '1px solid #E2E8F0' }}>
                                 <h4 style={{ fontSize: 14, fontWeight: 700, color: '#334155', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}><TrendingUp size={16} color="#475569" /> Final Actionable Steps (to reach 8+/10)</h4>
                                 <ul style={{ paddingLeft: '20px', margin: 0, color: '#475569', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                    {result.final_suggestions?.map((imp, i) => <li key={i}>{imp}</li>) || result.suggested_improvements?.map((imp, i) => <li key={i}>{imp}</li>)}
+                                    {Array.isArray(result.final_suggestions) ? result.final_suggestions.map((imp, i) => <li key={i}>{imp}</li>) : Array.isArray(result.suggested_improvements) ? result.suggested_improvements.map((imp, i) => <li key={i}>{imp}</li>) : null}
                                 </ul>
                             </div>
 

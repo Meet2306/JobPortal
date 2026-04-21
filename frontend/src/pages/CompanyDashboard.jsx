@@ -4,14 +4,13 @@ import { AuthContext } from '../context/AuthContext';
 import {
     LogOut, Building2, PlusCircle, Briefcase, Users,
     BarChart3, Bell, AlertCircle, CheckCircle, Globe,
-    Mail, Phone, TrendingUp, FileText, XCircle, Clock, Bot
+    Mail, Phone, TrendingUp, FileText, XCircle, Clock
 } from 'lucide-react';
 import {
     BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, LineChart, Line
 } from 'recharts';
-import ATSEvaluationModal from '../components/ATSEvaluationModal';
 
 
 const COLORS = ['#4F46E5', '#059669', '#D97706', '#DC2626', '#7C3AED', '#0891B2'];
@@ -55,7 +54,6 @@ const CompanyDashboard = () => {
     const [applicants, setApplicants] = useState([]);
     const [selectedJob, setSelectedJob] = useState(null);
     const [msg, setMsg] = useState({ type: '', text: '' });
-    const [evaluatingStudent, setEvaluatingStudent] = useState(null);
     const [new_job, setNewJob] = useState({ 
         title: '', 
         package: '',
@@ -554,13 +552,6 @@ const CompanyDashboard = () => {
                                                             ) : (
                                                                 <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
                                                             )}
-                                                            <button 
-                                                                onClick={() => setEvaluatingStudent(app.student)} 
-                                                                className="btn btn-sm" 
-                                                                style={{ background: 'var(--purple-soft)', color: 'var(--purple)', border: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-                                                            >
-                                                                <Bot size={14} /> AI Scan
-                                                            </button>
                                                         </div>
                                                     </td>
                                                     <td>
@@ -582,12 +573,6 @@ const CompanyDashboard = () => {
                 </div>
             </div>
 
-            {evaluatingStudent && (
-                <ATSEvaluationModal 
-                    student={evaluatingStudent} 
-                    onClose={() => setEvaluatingStudent(null)} 
-                />
-            )}
         </div>
     );
 };

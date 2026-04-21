@@ -41,23 +41,23 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-// let sessionOptions = {
-//     secret: process.env.SESSION_SECRET || 'placements-node-secret',
-//     resave: false,
-//     saveUninitialized: false,
-//     cookie: {
-//         secure: false, // removed production condition
-//         httpOnly: true,
-//         maxAge: 3600000, // 1 hour
-//         sameSite: 'lax' // lax for local
-//     },
-//     store: MongoStore.create({
-//         mongoUrl: process.env.MONGODB_URI,
-//         ttl: 3600 // 1 hour
-//     })
-// };
+let sessionOptions = {
+    secret: process.env.SESSION_SECRET || 'placements-node-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false, // removed production condition
+        httpOnly: true,
+        maxAge: 3600000, // 1 hour
+        sameSite: 'lax' // lax for local
+    },
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        ttl: 3600 // 1 hour
+    })
+};
 
-// app.use(session(sessionOptions));
+app.use(session(sessionOptions));
 
 // Routes
 app.use('/api/auth', authRoutes);
