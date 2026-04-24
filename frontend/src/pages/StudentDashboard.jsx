@@ -14,15 +14,7 @@ import {
     Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
-/* ── Dummy analytics data (replaced by real data if available) ── */
-const ACTIVITY_DATA = [
-    { month: 'Sep', applications: 0, responses: 0 },
-    { month: 'Oct', applications: 2, responses: 1 },
-    { month: 'Nov', applications: 4, responses: 2 },
-    { month: 'Dec', applications: 3, responses: 1 },
-    { month: 'Jan', applications: 6, responses: 3 },
-    { month: 'Feb', applications: 8, responses: 4 },
-];
+
 
 const STATUS_COLORS = {
     Applied: '#2563EB',
@@ -114,6 +106,13 @@ const StudentDashboard = () => {
                 return;
             }
         }
+
+        if (profile.contactNumber && !/^[789]\d{9}$/.test(profile.contactNumber)) {
+            setProfileStep(1);
+            setMsg({ type: 'error', text: 'Personal Details: Contact number must be exactly 10 digits and start with 7, 8, or 9' });
+            return;
+        }
+
         if (!profile.address?.city || !profile.address?.state) {
             setProfileStep(1);
             setMsg({ type: 'error', text: 'Personal Details: Please provide your city and state' });
@@ -338,6 +337,37 @@ const StudentDashboard = () => {
                                     </div>
 
                                     {applications.length > 0 && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.5fr)', gap: 16, marginBottom: 24 }}>
+                                            <div className="chart-card">
+                                                <div className="card-header"><div className="card-title">Application Status</div></div>
+                                                <ResponsiveContainer width="100%" height={200}>
+                                                    <PieChart>
+                                                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value">
+                                                            {pieData.map((d) => <Cell key={d.name} fill={STATUS_COLORS[d.name] || '#9CA3AF'} />)}
+                                                        </Pie>
+                                                        <Tooltip content={<CustomTooltip />} />
+                                                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                            <div className="chart-card">
+                                                <div className="card-header"><div className="card-title">Number of Applications by Status</div></div>
+                                                <ResponsiveContainer width="100%" height={200}>
+                                                    <BarChart data={pieData}>
+                                                        <CartesianGrid strokeDasharray="3 3" stroke="#E8EAF0" vertical={false} />
+                                                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                                                        <YAxis tick={{ fontSize: 11, fill: '#9CA3AF' }} allowDecimals={false} axisLine={false} tickLine={false} />
+                                                        <Tooltip content={<CustomTooltip />} />
+                                                        <Bar dataKey="value" name="Applications" fill="#2563EB" radius={[4, 4, 0, 0]}>
+                                                            {pieData.map((d) => <Cell key={d.name} fill={STATUS_COLORS[d.name] || '#2563EB'} />)}
+                                                        </Bar>
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {applications.length > 0 && (
                                         <div className="table-card">
                                             <div className="table-header"><div className="table-title">Recent Applications</div></div>
                                             <table className="data-table">
@@ -348,7 +378,7 @@ const StudentDashboard = () => {
                                                             <td className="cell-primary">{app.job?.title || '—'}</td>
                                                             <td>{app.job?.company?.companyName || '—'}</td>
                                                             <td><span className={`badge badge-${(app.status || 'applied').toLowerCase().replace(' ', '-')}`}><span className="badge-dot"></span>{app.status}</span></td>
-                                                            <td>{new Date(app.appliedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                                                            <td>{new Date(app.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -435,7 +465,7 @@ const StudentDashboard = () => {
                                                         <td className="cell-primary">{app.job?.title || '—'}</td>
                                                         <td>{app.job?.company?.companyName || '—'}</td>
                                                         <td><span className={`badge badge-${(app.status || 'applied').toLowerCase().replace(' ', '-')}`}><span className="badge-dot"></span>{app.status}</span></td>
-                                                        <td>{new Date(app.appliedAt).toLocaleDateString()}</td>
+                                                        <td>{new Date(app.createdAt).toLocaleDateString()}</td>
                                                     </tr>
                                                 ))}
                                                 {applications.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', padding: 40 }}>No applications found</td></tr>}
@@ -509,7 +539,7 @@ const StudentDashboard = () => {
                                             {profileStep === 1 && (
                                                 <div className="grid-2" style={{ gap: 16 }}>
                                                     <div className="form-group"><label className="form-label">Name</label><input className="form-control" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} disabled={isLocked} /></div>
-                                                    <div className="form-group"><label className="form-label">Phone</label><input className="form-control" value={profile.contactNumber} onChange={e => setProfile({...profile, contactNumber: e.target.value})} disabled={isLocked} /></div>
+                                                    <div className="form-group"><label className="form-label">Phone</label><input className="form-control" maxLength="10" placeholder="e.g. 9876543210" value={profile.contactNumber} onChange={e => setProfile({...profile, contactNumber: e.target.value.replace(/\D/g, '').slice(0, 10)})} disabled={isLocked} /></div>
                                                     <div className="form-group">
                                                         <label className="form-label">Gender</label>
                                                         <select className="form-control" value={profile.gender} onChange={e => setProfile({...profile, gender: e.target.value})} disabled={isLocked}>

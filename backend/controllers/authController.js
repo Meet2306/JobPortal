@@ -21,13 +21,15 @@ const registerSchema = Joi.object({
         .messages({ 'string.pattern.base': 'Password must be at least 8 chars, contain upper, lower, digit, and special char.' }),
     role: Joi.string().valid('student', 'company', 'admin').required(),
     name: Joi.string().allow('').when('role', { is: 'student', then: Joi.required(), otherwise: Joi.optional() }),
-    contactNumber: Joi.string().allow('').when('role', { is: 'student', then: Joi.required(), otherwise: Joi.optional() }),
+    contactNumber: Joi.string().regex(/^[789]\d{9}$/).allow('').when('role', { is: 'student', then: Joi.required(), otherwise: Joi.optional() })
+        .messages({ 'string.pattern.base': 'Contact number must be exactly 10 digits and start with 7, 8, or 9' }),
     companyName: Joi.string().allow('').when('role', { is: 'company', then: Joi.required(), otherwise: Joi.optional() }),
     industry: Joi.string().allow('').optional(),
     websiteUrl: Joi.string().uri().allow('', null).optional(),
     hrContactName: Joi.string().allow('').optional(),
     hrContactEmail: Joi.string().email().allow('', null).optional(),
-    hrContactNumber: Joi.string().allow('').optional(),
+    hrContactNumber: Joi.string().regex(/^[789]\d{9}$/).allow('').optional()
+        .messages({ 'string.pattern.base': 'HR Contact number must be exactly 10 digits and start with 7, 8, or 9' }),
     description: Joi.string().allow('').optional(),
     captcha: Joi.string().required()
 }).unknown(true);

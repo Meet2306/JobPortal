@@ -145,9 +145,12 @@ exports.getAnalytics = async (req, res) => {
             { $group: { _id: '$companyDetails.companyName', count: { $sum: 1 } } }
         ]);
 
-        const packageStats = await Job.aggregate([
-            { $match: { status: 'Live' } },
-            { $group: { _id: null, highest: { $max: '$package' }, lowest: { $min: '$package' }, avg: { $avg: '$package' } } }
+        const packageStats = await Application.aggregate([
+            { $match: { status: 'Selected' } },
+            { $lookup: { from: 'jobs', localField: 'job', foreignField: '_id', as: 'jobDetails' } },
+            { $unwind: '$jobDetails' },
+            { $match: { 'jobDetails.package': { $gt: 0 } } },
+            { $group: { _id: null, highest: { $max: '$jobDetails.package' }, lowest: { $min: '$jobDetails.package' }, avg: { $avg: '$jobDetails.package' } } }
         ]);
 
         res.json({
@@ -180,5 +183,75 @@ exports.handleEditRequest = async (req, res) => {
         res.json({ message: `Edit request ${action}ed` });
     } catch (err) {
         res.status(500).json({ error: 'Action failed' });
+    }
+};
+
+exports.getAllStudentsTracker = async (req, res) => {
+    try {
+        // 1. Get all verified students with their profiles
+        const verifiedStudentUsers = await User.find({ role: 'student', isVerified: true }).lean();
+        const studentUserIds = verifiedStudentUsers.map(u => u._id);
+
+        const studentProfiles = await StudentProfile.find({ user: { $in: studentUserIds } }).lean();
+
+        // 2. For each student profile, get their applications
+        const profileIds = studentProfiles.map(p => p._id);
+
+        const applications = await Application.find({ student: { $in: profileIds } })
+            .populate({
+                path: 'job',
+                select: 'title package location status company',
+                populate: {
+                    path: 'company',
+                    select: 'companyName industry'
+                }
+            })
+            .lean();
+
+        // 3. Group applications by student
+        const appsByStudent = {};
+        applications.forEach(app => {
+            const sid = app.student.toString();
+            if (!appsByStudent[sid]) appsByStudent[sid] = [];
+            appsByStudent[sid].push(app);
+        });
+
+        // 4. Build response
+        const result = studentProfiles.map(profile => {
+            const apps = appsByStudent[profile._id.toString()] || [];
+            const selectedApp = apps.find(a => a.status === 'Selected');
+
+            return {
+                _id: profile._id,
+                name: profile.name,
+                email: profile.emailAddress,
+                branch: profile.education?.branch || profile.branch || '—',
+                degree: profile.education?.degree || '—',
+                cgpa: profile.education?.cgpa || profile.cgpa || '—',
+                passingYear: profile.education?.endYear || profile.passingYear || '—',
+                profilePhoto: profile.profilePhoto || null,
+                totalApplications: apps.length,
+                isPlaced: !!selectedApp,
+                selectedCompany: selectedApp ? {
+                    companyName: selectedApp.job?.company?.companyName || '—',
+                    jobTitle: selectedApp.job?.title || '—',
+                    package: selectedApp.job?.package || 0,
+                } : null,
+                applications: apps.map(a => ({
+                    _id: a._id,
+                    status: a.status,
+                    appliedAt: a.createdAt,
+                    jobTitle: a.job?.title || '—',
+                    companyName: a.job?.company?.companyName || '—',
+                    package: a.job?.package || 0,
+                    location: a.job?.location || '—',
+                }))
+            };
+        });
+
+        res.json(result);
+    } catch (err) {
+        console.error('Student Tracker Error:', err);
+        res.status(500).json({ error: 'Failed to fetch student tracker data', details: err.message });
     }
 };

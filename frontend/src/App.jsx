@@ -7,6 +7,7 @@ import CompanyDashboard from './pages/CompanyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
+import AboutPage from './pages/AboutPage';
 
 const PrivateRoute = ({ children, role }) => {
   const { user, loading } = useContext(AuthContext);
@@ -37,11 +38,12 @@ const App = () => {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/"          element={<Navigate to="/login" />} />
+          <Route path="/"          element={<Navigate to="/about" />} />
           <Route path="/login"     element={<AuthPage initialMode="login" />} />
           <Route path="/register"  element={<AuthPage initialMode="register" />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify-email/:token"   element={<VerifyEmail />} />
+          <Route path="/about"     element={<AboutPage />} />
           <Route path="/student/*" element={<PrivateRoute role="student"><StudentDashboard /></PrivateRoute>} />
           <Route path="/company/*" element={<PrivateRoute role="company"><CompanyDashboard /></PrivateRoute>} />
           <Route path="/admin/*"   element={<PrivateRoute role="admin"><AdminDashboard /></PrivateRoute>} />

@@ -1,4 +1,4 @@
-﻿import React, { useState, useContext, useEffect, useCallback } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
@@ -314,12 +314,12 @@ function LeftImagePanel({ isRegister }) {
           {isRegister ? (
             <>
               Join the official placement platform.<br />
-              Empowering students, companies, and TPOs to connect and grow together.
+              Empowering students, companies and TPOs to connect and grow together.
             </>
           ) : (
             <>
               Your gateway to campus placements.<br />
-              Connecting students, companies, and TPOs on one platform.
+              Connecting students, companies and TPOs on one platform.
             </>
           )}
         </p>
@@ -571,6 +571,11 @@ export default function AuthPage({ initialMode }) {
                       className="text-indigo-600 font-bold hover:underline transition-all">
                       Sign in
                     </button></>}
+                <div className="mt-3">
+                  <button onClick={() => navigate('/about')} className="text-slate-500 hover:text-indigo-600 transition-colors text-xs font-semibold flex items-center justify-center gap-1 mx-auto">
+                    How it works <ArrowRight size={12} />
+                  </button>
+                </div>
               </motion.p>
             )}
           </AnimatePresence>
