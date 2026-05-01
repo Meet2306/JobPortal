@@ -143,6 +143,34 @@ exports.getApplicants = async (req, res) => {
     }
 };
 
+// Get all applicants for all jobs of the company
+exports.getAllApplicants = async (req, res) => {
+    try {
+        const company = await CompanyProfile.findOne({ user: req.user.id });
+        if (!company) return res.status(404).json({ error: 'Company profile not found' });
+
+        const jobs = await Job.find({ company: company._id }).select('_id title');
+        const jobIds = jobs.map(j => j._id);
+
+        const applications = await Application.find({ job: { $in: jobIds } })
+            .populate({
+                path: 'student',
+                select: 'name emailAddress contactNumber resumeUrl skills education user'
+            })
+            .populate({
+                path: 'job',
+                select: 'title'
+            })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.json(applications);
+    } catch (err) {
+        console.error('Get All Applicants Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
 // Update application state
 exports.updateApplicationStatus = async (req, res) => {
     try {

@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import {
     LogOut, ShieldCheck, BarChart3, Users, Briefcase,
     FileCheck, Building2, TrendingUp, CheckCircle, XCircle,
-    Bell, ChevronRight, Award
+    Bell, ChevronRight, Award, Search, Filter, Layers
 } from 'lucide-react';
 import {
     BarChart, Bar, PieChart, Pie, Cell,
@@ -31,6 +31,8 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const NAV = [
     { key: 'overview', label: 'Overview', icon: BarChart3 },
+    { key: 'all-users', label: 'User Management', icon: Users },
+    { key: 'applications', label: 'App Tracking', icon: Layers },
     { key: 'users', label: 'User Approvals', icon: Users },
     { key: 'jobs', label: 'Job Approvals', icon: Briefcase },
     { key: 'edits', label: 'Edit Requests', icon: FileCheck },
@@ -48,7 +50,24 @@ const AdminDashboard = () => {
     const [jobToApprove, setJobToApprove] = useState(null);
     const [approvalData, setApprovalData] = useState({ visibility: 'All', remarks: '' });
 
-    useEffect(() => { fetchPending(); fetchAnalytics(); }, []);
+    // New states for User Management and Application Tracking
+    const [allUsers, setAllUsers] = useState([]);
+    const [allApplications, setAllApplications] = useState([]);
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+    const [userFilterStatus, setUserFilterStatus] = useState('All');
+    const [appSearchTerm, setAppSearchTerm] = useState('');
+    const [appFilterStatus, setAppFilterStatus] = useState('All');
+    const [selectedApplication, setSelectedApplication] = useState(null);
+
+    useEffect(() => { 
+        fetchPending(); 
+        fetchAnalytics(); 
+    }, []);
+
+    useEffect(() => {
+        if (activeNav === 'all-users') fetchAllUsers();
+        if (activeNav === 'applications') fetchAllApplications();
+    }, [activeNav]);
 
     const fetchPending = async () => {
         try { 
@@ -63,6 +82,24 @@ const AdminDashboard = () => {
 
     const fetchAnalytics = async () => {
         try { const r = await api.get('/admin/analytics'); setAnalytics(r.data); } catch (e) {}
+    };
+
+    const fetchAllUsers = async () => {
+        try {
+            const r = await api.get('/admin/users');
+            setAllUsers(r.data);
+        } catch (e) {
+            console.error('Fetch All Users Error:', e);
+        }
+    };
+
+    const fetchAllApplications = async () => {
+        try {
+            const r = await api.get('/admin/applications');
+            setAllApplications(r.data);
+        } catch (e) {
+            console.error('Fetch Applications Error:', e);
+        }
     };
 
     const verifyUser = async (id) => {
@@ -122,6 +159,21 @@ const AdminDashboard = () => {
         selections: c.count,
     })) || [];
 
+    // Filtered lists
+    const filteredUsers = allUsers.filter(u => {
+        const matchesSearch = u.fullName.toLowerCase().includes(userSearchTerm.toLowerCase()) || u.email.toLowerCase().includes(userSearchTerm.toLowerCase());
+        const matchesStatus = userFilterStatus === 'All' || u.approvalStatus === userFilterStatus;
+        return matchesSearch && matchesStatus;
+    });
+
+    const filteredApplications = allApplications.filter(app => {
+        const matchesSearch = app.studentName.toLowerCase().includes(appSearchTerm.toLowerCase()) || 
+                              app.appliedCompanyName.toLowerCase().includes(appSearchTerm.toLowerCase()) ||
+                              app.jobRole.toLowerCase().includes(appSearchTerm.toLowerCase());
+        const matchesStatus = appFilterStatus === 'All' || app.status === appFilterStatus;
+        return matchesSearch && matchesStatus;
+    });
+
     return (
         <div className="app-layout">
             {/* ── SIDEBAR ── */}
@@ -171,7 +223,7 @@ const AdminDashboard = () => {
                             <div className="navbar-page-title">
                                 {NAV.find(n => n.key === activeNav)?.label || 'Admin'}
                             </div>
-                            <div className="navbar-breadcrumb">PlacePortal / Admin / {activeNav}</div>
+                            {/* <div className="navbar-breadcrumb">PlacePortal / Admin / {activeNav}</div> */}
                         </div>
                     </div>
                     <div className="navbar-right">
@@ -318,6 +370,138 @@ const AdminDashboard = () => {
                                         </table>
                                     </div>
                                 )}
+                            </>
+                        )}
+
+                        {/* ── USER MANAGEMENT (ALL USERS) ── */}
+                        {activeNav === 'all-users' && (
+                            <>
+                                <div className="page-header page-header-row">
+                                    <div><h1>User Directory</h1><p>Manage all registered students and companies</p></div>
+                                    <div style={{ display: 'flex', gap: 12 }}>
+                                        <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'white', padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', gap: 8 }}>
+                                            <Search size={16} color="var(--text-muted)" />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Search users..." 
+                                                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, width: 200 }}
+                                                value={userSearchTerm}
+                                                onChange={e => setUserSearchTerm(e.target.value)}
+                                            />
+                                        </div>
+                                        <select 
+                                            className="auth-input-field" 
+                                            style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
+                                            value={userFilterStatus}
+                                            onChange={e => setUserFilterStatus(e.target.value)}
+                                        >
+                                            <option value="All">All Status</option>
+                                            <option value="Approved">Approved</option>
+                                            <option value="Pending">Pending</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="table-card">
+                                    <div className="table-header"><div className="table-title">Registered Users ({filteredUsers.length})</div></div>
+                                    <table className="data-table">
+                                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Profile</th><th>Status</th></tr></thead>
+                                        <tbody>
+                                            {filteredUsers.map(u => (
+                                                <tr key={u._id}>
+                                                    <td className="cell-primary">{u.fullName}</td>
+                                                    <td>{u.email}</td>
+                                                    <td><span className={`badge ${u.role === 'student' ? 'badge-blue' : 'badge-purple'}`}><span className="badge-dot"></span>{u.role === 'student' ? 'Student' : 'Company'}</span></td>
+                                                    <td>
+                                                        <span className={`badge ${u.profileCompletionStatus === 'Complete' ? 'badge-success' : 'badge-warning'}`}>
+                                                            {u.profileCompletionStatus}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`badge ${u.approvalStatus === 'Approved' ? 'badge-success' : 'badge-danger'}`}>
+                                                            {u.approvalStatus}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {filteredUsers.length === 0 && (
+                                                <tr><td colSpan={5}><div className="empty-state"><div className="empty-state-icon" style={{ margin: '0 auto 12px' }}><Users size={24} /></div><h3>No users found</h3><p>Try adjusting your search or filter</p></div></td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
+                        )}
+
+                        {/* ── APPLICATION TRACKING ── */}
+                        {activeNav === 'applications' && (
+                            <>
+                                <div className="page-header page-header-row">
+                                    <div><h1>Application Tracker</h1><p>Monitor all student job applications</p></div>
+                                    <div style={{ display: 'flex', gap: 12 }}>
+                                        <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'white', padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', gap: 8 }}>
+                                            <Search size={16} color="var(--text-muted)" />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Search student, company..." 
+                                                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, width: 220 }}
+                                                value={appSearchTerm}
+                                                onChange={e => setAppSearchTerm(e.target.value)}
+                                            />
+                                        </div>
+                                        <select 
+                                            className="auth-input-field" 
+                                            style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
+                                            value={appFilterStatus}
+                                            onChange={e => setAppFilterStatus(e.target.value)}
+                                        >
+                                            <option value="All">All Statuses</option>
+                                            <option value="Applied">Applied</option>
+                                            <option value="Shortlisted">Shortlisted</option>
+                                            <option value="Interview Scheduled">Interview Scheduled</option>
+                                            <option value="Selected">Selected</option>
+                                            <option value="Rejected">Rejected</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="table-card">
+                                    <div className="table-header"><div className="table-title">Job Applications ({filteredApplications.length})</div></div>
+                                    <table className="data-table">
+                                        <thead><tr><th>Student</th><th>Company</th><th>Role</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+                                        <tbody>
+                                            {filteredApplications.map(app => (
+                                                <tr key={app._id}>
+                                                    <td className="cell-primary">
+                                                        <div>{app.studentName}</div>
+                                                        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}>{app.studentEmail}</div>
+                                                    </td>
+                                                    <td style={{ fontWeight: 600 }}>{app.appliedCompanyName}</td>
+                                                    <td>{app.jobRole}</td>
+                                                    <td>{new Date(app.applicationDate).toLocaleDateString()}</td>
+                                                    <td>
+                                                        <span className={`badge ${
+                                                            app.status === 'Selected' ? 'badge-success' : 
+                                                            app.status === 'Rejected' ? 'badge-danger' : 
+                                                            app.status === 'Applied' ? 'badge-blue' : 'badge-warning'
+                                                        }`}>
+                                                            {app.status}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <button 
+                                                            className="btn btn-outline btn-sm"
+                                                            onClick={() => setSelectedApplication(app)}
+                                                        >
+                                                            History
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {filteredApplications.length === 0 && (
+                                                <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon" style={{ margin: '0 auto 12px' }}><Layers size={24} /></div><h3>No applications found</h3><p>Try adjusting your search or filter</p></div></td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </>
                         )}
 
@@ -633,6 +817,72 @@ const AdminDashboard = () => {
                         <div style={{ display: 'flex', gap: 12, padding: '0 24px 24px' }}>
                             <button onClick={() => setJobToApprove(null)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
                             <button onClick={submitApproval} className="btn btn-success" style={{ flex: 1 }}>Live & Approve</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── APPLICATION HISTORY MODAL ── */}
+            {selectedApplication && (
+                <div className="modal-overlay animate-fade-in" onClick={() => setSelectedApplication(null)}>
+                    <div className="modal-card animate-scale-in" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
+                        <div className="modal-header">
+                            <div className="modal-title">Application History</div>
+                            <div className="modal-subtitle">
+                                Tracking timeline for {selectedApplication.studentName} at {selectedApplication.appliedCompanyName}
+                            </div>
+                        </div>
+
+                        <div className="modal-body" style={{ padding: '0 24px 24px' }}>
+                            <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-lg)', padding: 16, marginBottom: 20 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Job Role</div>
+                                        <div style={{ fontWeight: 600 }}>{selectedApplication.jobRole}</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Current Status</div>
+                                        <div>
+                                            <span className={`badge ${
+                                                selectedApplication.status === 'Selected' ? 'badge-success' : 
+                                                selectedApplication.status === 'Rejected' ? 'badge-danger' : 
+                                                selectedApplication.status === 'Applied' ? 'badge-blue' : 'badge-warning'
+                                            }`}>
+                                                {selectedApplication.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'var(--text-main)' }}>Timeline</h4>
+                            
+                            <div style={{ position: 'relative', paddingLeft: 20 }}>
+                                <div style={{ position: 'absolute', left: 5, top: 10, bottom: 10, width: 2, background: 'var(--border)' }}></div>
+                                
+                                <div style={{ position: 'relative', marginBottom: 20 }}>
+                                    <div style={{ position: 'absolute', left: -21, top: 4, width: 12, height: 12, borderRadius: '50%', background: 'var(--blue)', border: '2px solid white', boxShadow: '0 0 0 1px var(--blue)' }}></div>
+                                    <div style={{ fontWeight: 600, fontSize: 14 }}>Applied</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(selectedApplication.applicationDate).toLocaleString()}</div>
+                                </div>
+
+                                {selectedApplication.auditLog && selectedApplication.auditLog.map((log, index) => (
+                                    <div key={index} style={{ position: 'relative', marginBottom: 20 }}>
+                                        <div style={{ position: 'absolute', left: -21, top: 4, width: 12, height: 12, borderRadius: '50%', background: log.status === 'Selected' ? 'var(--success)' : log.status === 'Rejected' ? 'var(--danger)' : 'var(--warning)', border: '2px solid white', boxShadow: '0 0 0 1px var(--border)' }}></div>
+                                        <div style={{ fontWeight: 600, fontSize: 14 }}>Status updated to {log.status}</div>
+                                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(log.changedAt).toLocaleString()}</div>
+                                        {log.remarks && (
+                                            <div style={{ fontSize: 13, marginTop: 4, padding: '8px 12px', background: 'var(--bg)', borderRadius: 6, fontStyle: 'italic' }}>
+                                                "{log.remarks}"
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 24px 24px' }}>
+                            <button onClick={() => setSelectedApplication(null)} className="btn btn-outline">Close</button>
                         </div>
                     </div>
                 </div>

@@ -182,3 +182,86 @@ exports.handleEditRequest = async (req, res) => {
         res.status(500).json({ error: 'Action failed' });
     }
 };
+
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({ role: { $ne: 'admin' } }).select('-password').lean();
+        
+        const userIds = users.map(u => u._id);
+        const students = await StudentProfile.find({ user: { $in: userIds } }).lean();
+        const companies = await CompanyProfile.find({ user: { $in: userIds } }).lean();
+
+        const usersList = users.map(user => {
+            let details = null;
+            let fullName = 'N/A';
+            let profileCompletionStatus = 'Incomplete';
+            let approvalStatus = user.isVerified ? 'Approved' : 'Pending';
+
+            if (user.role === 'student') {
+                details = students.find(s => s.user.toString() === user._id.toString());
+                if (details) {
+                    fullName = details.name;
+                    // Simple heuristic: if name and contactNumber exist, consider basic profile Complete
+                    profileCompletionStatus = (details.name && details.contactNumber) ? 'Complete' : 'Incomplete';
+                }
+            } else if (user.role === 'company') {
+                details = companies.find(c => c.user.toString() === user._id.toString());
+                if (details) {
+                    fullName = details.companyName;
+                    profileCompletionStatus = (details.companyName) ? 'Complete' : 'Incomplete';
+                    approvalStatus = details.isApproved ? 'Approved' : 'Pending';
+                }
+            }
+
+            return {
+                _id: user._id,
+                fullName,
+                email: user.email,
+                role: user.role,
+                profileCompletionStatus,
+                approvalStatus,
+                createdAt: user.createdAt
+            };
+        });
+
+        res.json(usersList);
+    } catch (err) {
+        console.error('Get All Users Error:', err);
+        res.status(500).json({ error: 'Server error fetching all users', details: err.message });
+    }
+};
+
+exports.getAllApplications = async (req, res) => {
+    try {
+        const applications = await Application.find()
+            .populate('student', 'name emailAddress')
+            .populate({
+                path: 'job',
+                select: 'title company',
+                populate: {
+                    path: 'company',
+                    select: 'companyName'
+                }
+            })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const formattedApplications = applications.map(app => {
+            return {
+                _id: app._id,
+                studentName: app.student ? app.student.name : 'Unknown',
+                studentEmail: app.student ? app.student.emailAddress : 'Unknown',
+                appliedCompanyName: app.job && app.job.company ? app.job.company.companyName : 'Unknown',
+                jobRole: app.job ? app.job.title : 'Unknown',
+                applicationDate: app.createdAt,
+                status: app.status,
+                auditLog: app.auditLog
+            };
+        });
+
+        res.json(formattedApplications);
+    } catch (err) {
+        console.error('Get All Applications Error:', err);
+        res.status(500).json({ error: 'Server error fetching applications', details: err.message });
+    }
+};

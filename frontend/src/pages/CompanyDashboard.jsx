@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import {
     LogOut, Building2, PlusCircle, Briefcase, Users,
     BarChart3, Bell, AlertCircle, CheckCircle, Globe,
-    Mail, Phone, TrendingUp, FileText, XCircle, Clock
+    Mail, Phone, TrendingUp, FileText, XCircle, Clock, Search, Filter
 } from 'lucide-react';
 import {
     BarChart, Bar, PieChart, Pie, Cell,
@@ -42,8 +42,8 @@ const NAV = [
     { key: 'overview', label: 'Overview', icon: BarChart3 },
     { key: 'profile', label: 'Company Profile', icon: Building2 },
     { key: 'post', label: 'Post a Job', icon: PlusCircle },
-    { key: 'listings', label: 'My Job Listings', icon: Briefcase },
-    { key: 'applicants', label: 'Applicants', icon: Users },
+    { key: 'listings', label: 'Job-wise Tracking', icon: Briefcase },
+    { key: 'all-applicants', label: 'Applicant Management', icon: Users },
 ];
 
 const CompanyDashboard = () => {
@@ -67,7 +67,17 @@ const CompanyDashboard = () => {
         eligibleBranches: ''
     });
 
+    const [allApplicants, setAllApplicants] = useState([]);
+    const [applicantSearchTerm, setApplicantSearchTerm] = useState('');
+    const [applicantStatusFilter, setApplicantStatusFilter] = useState('All');
+    const [applicantJobFilter, setApplicantJobFilter] = useState('All');
+    const [selectedStudent, setSelectedStudent] = useState(null);
+
     useEffect(() => { fetchProfile(); fetchJobs(); }, []);
+
+    useEffect(() => {
+        if (activeNav === 'all-applicants') fetchAllApplicants();
+    }, [activeNav]);
 
     const fetchProfile = async () => {
         try { 
@@ -92,6 +102,15 @@ const CompanyDashboard = () => {
     const fetchApplicants = async (jobId) => {
         setSelectedJob(jobId);
         try { const r = await api.get(`/company/jobs/${jobId}/applicants`); setApplicants(r.data); setActiveNav('applicants'); } catch (e) {}
+    };
+
+    const fetchAllApplicants = async () => {
+        try {
+            const r = await api.get('/company/applicants');
+            setAllApplicants(r.data);
+        } catch (e) {
+            console.error('Fetch All Applicants Error:', e);
+        }
     };
 
     const updateProfile = async (e) => {
@@ -144,9 +163,41 @@ const CompanyDashboard = () => {
         } catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Failed' }); }
     };
 
-    const updateApplicantStatus = async (appId, status) => {
-        try { await api.patch(`/company/applications/${appId}/status`, { status }); fetchApplicants(selectedJob); }
-        catch (e) { setMsg({ type: 'error', text: 'Failed to update status' }); }
+    const updateApplicantStatus = async (appId, status, isGlobal = false) => {
+        try { 
+            await api.patch(`/company/applications/${appId}/status`, { status }); 
+            if (isGlobal) {
+                fetchAllApplicants();
+            } else {
+                fetchApplicants(selectedJob); 
+            }
+        }
+        catch (e) { setMsg({ type: 'error', text: 'Failed to update status. Invalid transition or server error.' }); }
+    };
+
+    const renderStatusSelect = (app, isGlobal = false) => {
+        const transitions = {
+            'Applied': ['Applied', 'Shortlisted', 'Rejected'],
+            'Shortlisted': ['Shortlisted', 'Interview Scheduled', 'Rejected'],
+            'Interview Scheduled': ['Interview Scheduled', 'Selected', 'Rejected'],
+            'Selected': ['Selected'],
+            'Rejected': ['Rejected']
+        };
+        const validStatuses = transitions[app.status] || [app.status];
+        
+        return (
+            <select 
+                className="form-select" 
+                style={{ height: 32, fontSize: 11 }} 
+                value={app.status} 
+                onChange={e => updateApplicantStatus(app._id, e.target.value, isGlobal)}
+                disabled={app.status === 'Selected' || app.status === 'Rejected'}
+            >
+                {STATUS_SELECT.map(s => (
+                    <option key={s.value} value={s.value} disabled={!validStatuses.includes(s.value)}>{s.label}</option>
+                ))}
+            </select>
+        );
     };
 
     const isLocked = profile.isLocked && profile.editRequestStatus !== 'Approved';
@@ -156,6 +207,19 @@ const CompanyDashboard = () => {
     const statusCounts = jobs.reduce((acc, j) => { acc[j.status] = (acc[j.status] || 0) + 1; return acc; }, {});
     const jobStatusPie = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
     const applicantsPerJob = jobs.slice(0, 8).map(j => ({ title: j.title?.slice(0, 15) + (j.title?.length > 15 ? '…' : ''), applications: j.applicationCount || 0 }));
+
+    // Filters for All Applicants
+    const filteredAllApplicants = allApplicants.filter(app => {
+        const searchStr = applicantSearchTerm.toLowerCase();
+        const matchesSearch = (app.student?.name || '').toLowerCase().includes(searchStr) || 
+                              (app.student?.skills?.technical || []).some(s => s.toLowerCase().includes(searchStr)) ||
+                              (app.student?.skills?.soft || []).some(s => s.toLowerCase().includes(searchStr));
+        
+        const matchesStatus = applicantStatusFilter === 'All' || app.status === applicantStatusFilter;
+        const matchesJob = applicantJobFilter === 'All' || app.job?._id === applicantJobFilter;
+
+        return matchesSearch && matchesStatus && matchesJob;
+    });
 
     return (
         <div className="app-layout">
@@ -520,6 +584,99 @@ const CompanyDashboard = () => {
                             </>
                         )}
 
+                        {/* ── ALL APPLICANTS MANAGEMENT ── */}
+                        {activeNav === 'all-applicants' && user.isVerified && (
+                            <>
+                                <div className="page-header page-header-row">
+                                    <div><h1>Applicant Management</h1><p>Manage applications across all your jobs</p></div>
+                                    <div style={{ display: 'flex', gap: 12 }}>
+                                        <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'white', padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', gap: 8 }}>
+                                            <Search size={16} color="var(--text-muted)" />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Search by name or skills..." 
+                                                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, width: 180 }}
+                                                value={applicantSearchTerm}
+                                                onChange={e => setApplicantSearchTerm(e.target.value)}
+                                            />
+                                        </div>
+                                        <select 
+                                            className="form-select" 
+                                            style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
+                                            value={applicantJobFilter}
+                                            onChange={e => setApplicantJobFilter(e.target.value)}
+                                        >
+                                            <option value="All">All Jobs</option>
+                                            {jobs.map(j => (
+                                                <option key={j._id} value={j._id}>{j.title}</option>
+                                            ))}
+                                        </select>
+                                        <select 
+                                            className="form-select" 
+                                            style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
+                                            value={applicantStatusFilter}
+                                            onChange={e => setApplicantStatusFilter(e.target.value)}
+                                        >
+                                            <option value="All">All Statuses</option>
+                                            {STATUS_SELECT.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="table-card">
+                                    <div className="table-header"><div className="table-title">Applicants ({filteredAllApplicants.length})</div></div>
+                                    <table className="data-table">
+                                        <thead><tr><th>Applicant</th><th>Applied Role</th><th>Skills</th><th>Education</th><th>Resume</th><th>Date</th><th>Status</th></tr></thead>
+                                        <tbody>
+                                            {filteredAllApplicants.map(app => (
+                                                <tr key={app._id}>
+                                                    <td className="cell-primary">
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <div 
+                                                                    style={{ color: 'var(--primary)', cursor: 'pointer' }}
+                                                                    onClick={() => setSelectedStudent(app.student)}
+                                                                >
+                                                                    {app.student?.name || '—'}
+                                                                </div>
+                                                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{app.student?.emailAddress}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ fontWeight: 600 }}>{app.job?.title}</td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 150 }}>
+                                                            {app.student?.skills?.technical?.slice(0, 2).map((s, i) => (
+                                                                <span key={i} className="badge" style={{ fontSize: 9 }}>{s}</span>
+                                                            ))}
+                                                            {(app.student?.skills?.technical?.length > 2) && <span className="badge" style={{ fontSize: 9 }}>+{app.student?.skills?.technical?.length - 2}</span>}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: 12 }}>
+                                                            <div>{app.student?.education?.degree} {app.student?.education?.branch}</div>
+                                                            <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>CGPA: {app.student?.education?.cgpa || app.student?.cgpa || '—'}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        {app.student?.resumeUrl ? (
+                                                            <a href={app.student.resumeUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-sm">CV</a>
+                                                        ) : (
+                                                            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ fontSize: 12 }}>{new Date(app.createdAt).toLocaleDateString()}</td>
+                                                    <td>{renderStatusSelect(app, true)}</td>
+                                                </tr>
+                                            ))}
+                                            {filteredAllApplicants.length === 0 && (
+                                                <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon" style={{ margin: '0 auto 12px' }}><Users size={22} /></div><h3>No applicants found</h3><p>Try adjusting your search filters.</p></div></td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
+                        )}
+
                         {/* ── APPLICANTS ── */}
                         {activeNav === 'applicants' && user.isVerified && (
                             <>
@@ -552,12 +709,11 @@ const CompanyDashboard = () => {
                                                             ) : (
                                                                 <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
                                                             )}
+                                                            <button className="btn btn-outline btn-sm" onClick={() => setSelectedStudent(app.student)}>Profile</button>
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <select className="form-select" style={{ height: 32, fontSize: 11 }} value={app.status} onChange={e => updateApplicantStatus(app._id, e.target.value)}>
-                                                            {STATUS_SELECT.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                                                        </select>
+                                                        {renderStatusSelect(app, false)}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -573,6 +729,54 @@ const CompanyDashboard = () => {
                 </div>
             </div>
 
+            {/* ── STUDENT PROFILE MODAL ── */}
+            {selectedStudent && (
+                <div className="modal-overlay animate-fade-in" onClick={() => setSelectedStudent(null)}>
+                    <div className="modal-card animate-scale-in" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
+                        <div className="modal-header">
+                            <div className="modal-title">Student Profile</div>
+                            <div className="modal-subtitle">Detailed view of candidate</div>
+                        </div>
+                        <div className="modal-body" style={{ padding: '0 24px 24px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                                <div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Full Name</div>
+                                    <div style={{ fontWeight: 600, fontSize: 15 }}>{selectedStudent.name}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Contact Info</div>
+                                    <div style={{ fontWeight: 600, fontSize: 14 }}>{selectedStudent.emailAddress}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{selectedStudent.contactNumber}</div>
+                                </div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Education</div>
+                                    <div style={{ fontWeight: 600 }}>{selectedStudent.education?.degree || '—'} in {selectedStudent.education?.branch || '—'}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>College: {selectedStudent.education?.collegeName || '—'}</div>
+                                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>CGPA: {selectedStudent.education?.cgpa || selectedStudent.cgpa || '—'}</div>
+                                </div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>Skills</div>
+                                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                        {selectedStudent.skills?.technical?.map((s, i) => (
+                                            <span key={`tech-${i}`} className="badge badge-blue">{s}</span>
+                                        ))}
+                                        {selectedStudent.skills?.soft?.map((s, i) => (
+                                            <span key={`soft-${i}`} className="badge badge-purple">{s}</span>
+                                        ))}
+                                        {(!selectedStudent.skills?.technical?.length && !selectedStudent.skills?.soft?.length) && <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>No skills listed</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 24px 24px' }}>
+                            {selectedStudent.resumeUrl && (
+                                <a href={selectedStudent.resumeUrl} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ marginRight: 12 }}>View Resume</a>
+                            )}
+                            <button onClick={() => setSelectedStudent(null)} className="btn btn-outline">Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

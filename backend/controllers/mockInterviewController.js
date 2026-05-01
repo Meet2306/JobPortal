@@ -8,7 +8,7 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 exports.createInterview = async (req, res) => {
     try {
         const { jobRole, difficulty } = req.body;
-        
+
         if (!jobRole) {
             return res.status(400).json({ error: 'Job role is required' });
         }
@@ -26,12 +26,12 @@ For example: What is hoisting in JS?|||Explain event loop.|||What are Closures?`
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
-        
+
         let parsedQuestions = text.split("|||").map(q => q.trim()).filter(q => q.length > 0);
-        
+
         // Fallback for unexpected formats
         if (parsedQuestions.length === 1 && text.includes('\n')) {
-             parsedQuestions = text.split('\n').map(q => q.replace(/^\d+\.\s*/, '').trim()).filter(q => q.length > 0);
+            parsedQuestions = text.split('\n').map(q => q.replace(/^\d+\.\s*/, '').trim()).filter(q => q.length > 0);
         }
 
         const questionsObj = parsedQuestions.map(q => ({
@@ -73,7 +73,7 @@ exports.submitAnswer = async (req, res) => {
 
         const interview = await MockInterview.findById(interviewId);
         if (!interview) return res.status(404).json({ error: 'Interview not found' });
-        
+
         if (interview.student.toString() !== req.user.id.toString()) {
             return res.status(403).json({ error: 'Unauthorized to modify this interview' });
         }
@@ -108,7 +108,7 @@ exports.submitAnswer = async (req, res) => {
         if (scoreMatch) {
             score = parseFloat(scoreMatch[1]);
         }
-        
+
         const feedbackMatch = text.match(/Feedback:\s*([\s\S]*)/i);
         if (feedbackMatch) {
             feedback = feedbackMatch[1].trim();
@@ -150,11 +150,11 @@ exports.getInterviewById = async (req, res) => {
     try {
         const interview = await MockInterview.findById(req.params.id);
         if (!interview) return res.status(404).json({ error: 'Interview not found' });
-        
+
         if (interview.student.toString() !== req.user.id.toString()) {
             return res.status(403).json({ error: 'Unauthorized to view this interview' });
         }
-        
+
         res.json(interview);
     } catch (err) {
         console.error("Error fetching interview:", err);

@@ -16,6 +16,7 @@ router.get('/jobs', companyController.getJobs);
 router.use(verifiedMiddleware); // Wait for TPO to approve company before posting 
 
 router.post('/jobs', companyController.postJob);
+router.get('/applicants', companyController.getAllApplicants);
 router.get('/jobs/:jobId/applicants', companyController.getApplicants);
 router.patch('/applications/:appId/status', companyController.updateApplicationStatus);
 
