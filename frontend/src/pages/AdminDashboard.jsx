@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
-import {LogOut, ShieldCheck, BarChart3, Users, Briefcase,
+import {
+    LogOut, ShieldCheck, BarChart3, Users, Briefcase,
     FileCheck, Building2, TrendingUp, CheckCircle, XCircle,
-    Bell, ChevronRight, Award
+    Bell, ChevronRight, Award, Layers, GraduationCap, Search
 } from 'lucide-react';
 import {
     BarChart, Bar, PieChart, Pie, Cell,
@@ -49,28 +50,69 @@ const AdminDashboard = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [jobToApprove, setJobToApprove] = useState(null);
     const [approvalData, setApprovalData] = useState({ visibility: 'All', remarks: '' });
-    
+
     const [students, setStudents] = useState([]);
     const [studentSearch, setStudentSearch] = useState('');
     const [studentFilter, setStudentFilter] = useState('all'); // 'all' | 'placed' | 'unplaced'
     const [expandedStudent, setExpandedStudent] = useState(null); // student _id being expanded
     const [studentsLoading, setStudentsLoading] = useState(false);
 
-    useEffect(() => { fetchPending(); fetchAnalytics(); }, []);
+    const [allUsers, setAllUsers] = useState([]);
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+    const [userFilterStatus, setUserFilterStatus] = useState('All');
+
+    const [allApplications, setAllApplications] = useState([]);
+    const [appSearchTerm, setAppSearchTerm] = useState('');
+    const [appFilterStatus, setAppFilterStatus] = useState('All');
+    const [selectedApplication, setSelectedApplication] = useState(null);
+
+    useEffect(() => { 
+        fetchPending(); 
+        fetchAnalytics(); 
+        fetchAllUsers();
+        fetchAllApplications();
+        fetchStudents();
+    }, []);
+
+    const fetchAllUsers = async () => {
+        try {
+            const r = await api.get('/admin/users');
+            setAllUsers(r.data.users || []);
+        } catch (e) { console.error('Fetch Users Error:', e); }
+    };
+
+    const fetchAllApplications = async () => {
+        try {
+            const r = await api.get('/admin/applications');
+            setAllApplications(r.data.applications || []);
+        } catch (e) { console.error('Fetch Applications Error:', e); }
+    };
+
+    const fetchStudents = async () => {
+        setStudentsLoading(true);
+        try {
+            const r = await api.get('/admin/students-tracking');
+            setStudents(r.data || []);
+        } catch (e) {
+            console.error('Fetch Students Error:', e);
+        } finally {
+            setStudentsLoading(false);
+        }
+    };
 
     const fetchPending = async () => {
-        try { 
-            const r = await api.get('/admin/pending'); 
-            setUnverifiedUsers(r.data.unverifiedUsers); 
-            setPendingJobs(r.data.pendingJobs); 
-            setEditRequests(r.data.editRequests); 
+        try {
+            const r = await api.get('/admin/pending');
+            setUnverifiedUsers(r.data.unverifiedUsers);
+            setPendingJobs(r.data.pendingJobs);
+            setEditRequests(r.data.editRequests);
         } catch (e) {
             console.error('Fetch Pending Error:', e);
         }
     };
 
     const fetchAnalytics = async () => {
-        try { const r = await api.get('/admin/analytics'); setAnalytics(r.data); } catch (e) {}
+        try { const r = await api.get('/admin/analytics'); setAnalytics(r.data); } catch (e) { }
     };
 
     const verifyUser = async (id) => {
@@ -86,10 +128,10 @@ const AdminDashboard = () => {
     const handleJobAction = async (jobId, status) => {
         if (status === 'Rejected') {
             if (!window.confirm('Reject this job posting?')) return;
-            try { 
-                const remarks = prompt('Rejection Remarks (optional):') || ''; 
-                await api.patch(`/admin/jobs/${jobId}/approve`, { status, remarks }); 
-                fetchPending(); 
+            try {
+                const remarks = prompt('Rejection Remarks (optional):') || '';
+                await api.patch(`/admin/jobs/${jobId}/approve`, { status, remarks });
+                fetchPending();
             } catch (e) { alert('Failed'); }
         } else {
             const job = pendingJobs.find(p => p._id === jobId);
@@ -101,10 +143,10 @@ const AdminDashboard = () => {
     const submitApproval = async () => {
         if (!jobToApprove) return;
         try {
-            await api.patch(`/admin/jobs/${jobToApprove._id}/approve`, { 
-                status: 'Live', 
+            await api.patch(`/admin/jobs/${jobToApprove._id}/approve`, {
+                status: 'Live',
                 visibility: approvalData.visibility,
-                remarks: approvalData.remarks 
+                remarks: approvalData.remarks
             });
             setJobToApprove(null);
             fetchPending();
@@ -138,9 +180,9 @@ const AdminDashboard = () => {
     });
 
     const filteredApplications = allApplications.filter(app => {
-        const matchesSearch = app.studentName.toLowerCase().includes(appSearchTerm.toLowerCase()) || 
-                              app.appliedCompanyName.toLowerCase().includes(appSearchTerm.toLowerCase()) ||
-                              app.jobRole.toLowerCase().includes(appSearchTerm.toLowerCase());
+        const matchesSearch = app.studentName.toLowerCase().includes(appSearchTerm.toLowerCase()) ||
+            app.appliedCompanyName.toLowerCase().includes(appSearchTerm.toLowerCase()) ||
+            app.jobRole.toLowerCase().includes(appSearchTerm.toLowerCase());
         const matchesStatus = appFilterStatus === 'All' || app.status === appFilterStatus;
         return matchesSearch && matchesStatus;
     });
@@ -352,16 +394,16 @@ const AdminDashboard = () => {
                                     <div style={{ display: 'flex', gap: 12 }}>
                                         <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'white', padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', gap: 8 }}>
                                             <Search size={16} color="var(--text-muted)" />
-                                            <input 
-                                                type="text" 
-                                                placeholder="Search users..." 
+                                            <input
+                                                type="text"
+                                                placeholder="Search users..."
                                                 style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, width: 200 }}
                                                 value={userSearchTerm}
                                                 onChange={e => setUserSearchTerm(e.target.value)}
                                             />
                                         </div>
-                                        <select 
-                                            className="auth-input-field" 
+                                        <select
+                                            className="auth-input-field"
                                             style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
                                             value={userFilterStatus}
                                             onChange={e => setUserFilterStatus(e.target.value)}
@@ -411,16 +453,16 @@ const AdminDashboard = () => {
                                     <div style={{ display: 'flex', gap: 12 }}>
                                         <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'white', padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', gap: 8 }}>
                                             <Search size={16} color="var(--text-muted)" />
-                                            <input 
-                                                type="text" 
-                                                placeholder="Search student, company..." 
+                                            <input
+                                                type="text"
+                                                placeholder="Search student, company..."
                                                 style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, width: 220 }}
                                                 value={appSearchTerm}
                                                 onChange={e => setAppSearchTerm(e.target.value)}
                                             />
                                         </div>
-                                        <select 
-                                            className="auth-input-field" 
+                                        <select
+                                            className="auth-input-field"
                                             style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
                                             value={appFilterStatus}
                                             onChange={e => setAppFilterStatus(e.target.value)}
@@ -449,16 +491,15 @@ const AdminDashboard = () => {
                                                     <td>{app.jobRole}</td>
                                                     <td>{new Date(app.applicationDate).toLocaleDateString()}</td>
                                                     <td>
-                                                        <span className={`badge ${
-                                                            app.status === 'Selected' ? 'badge-success' : 
-                                                            app.status === 'Rejected' ? 'badge-danger' : 
-                                                            app.status === 'Applied' ? 'badge-blue' : 'badge-warning'
-                                                        }`}>
+                                                        <span className={`badge ${app.status === 'Selected' ? 'badge-success' :
+                                                                app.status === 'Rejected' ? 'badge-danger' :
+                                                                    app.status === 'Applied' ? 'badge-blue' : 'badge-warning'
+                                                            }`}>
                                                             {app.status}
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <button 
+                                                        <button
                                                             className="btn btn-outline btn-sm"
                                                             onClick={() => setSelectedApplication(app)}
                                                         >
@@ -745,8 +786,8 @@ const AdminDashboard = () => {
                                         {/* Filter Buttons */}
                                         <div style={{ display: 'flex', gap: 6 }}>
                                             {[
-                                                { key: 'all',      label: 'All Students' },
-                                                { key: 'placed',   label: '✅ Placed'    },
+                                                { key: 'all', label: 'All Students' },
+                                                { key: 'placed', label: '✅ Placed' },
                                                 { key: 'unplaced', label: '⏳ Not Placed' },
                                             ].map(f => (
                                                 <button key={f.key} onClick={() => setStudentFilter(f.key)}
@@ -922,11 +963,11 @@ const AdminDashboard = () => {
                                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                                                                 {s.applications.map((app, ai) => {
                                                                                     const statusColors = {
-                                                                                        'Applied':              { bg: 'rgba(37,99,235,0.1)',   color: '#2563EB' },
-                                                                                        'Shortlisted':          { bg: 'rgba(217,119,6,0.1)',  color: '#D97706' },
-                                                                                        'Interview Scheduled':  { bg: 'rgba(124,58,237,0.1)', color: '#7C3AED' },
-                                                                                        'Selected':             { bg: 'rgba(5,150,105,0.1)',  color: '#059669' },
-                                                                                        'Rejected':             { bg: 'rgba(220,38,38,0.1)',  color: '#DC2626' },
+                                                                                        'Applied': { bg: 'rgba(37,99,235,0.1)', color: '#2563EB' },
+                                                                                        'Shortlisted': { bg: 'rgba(217,119,6,0.1)', color: '#D97706' },
+                                                                                        'Interview Scheduled': { bg: 'rgba(124,58,237,0.1)', color: '#7C3AED' },
+                                                                                        'Selected': { bg: 'rgba(5,150,105,0.1)', color: '#059669' },
+                                                                                        'Rejected': { bg: 'rgba(220,38,38,0.1)', color: '#DC2626' },
                                                                                     };
                                                                                     const sc = statusColors[app.status] || { bg: 'var(--bg)', color: 'var(--text-muted)' };
                                                                                     return (
@@ -1061,14 +1102,14 @@ const AdminDashboard = () => {
                             <div style={{ marginBottom: 20 }}>
                                 <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text-main)' }}>Display Visibility</label>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                    <button 
+                                    <button
                                         className={`btn ${approvalData.visibility === 'All' ? 'btn-primary' : 'btn-outline'}`}
                                         onClick={() => setApprovalData(d => ({ ...d, visibility: 'All' }))}
                                         style={{ fontSize: 12 }}
                                     >
                                         Display to All Students
                                     </button>
-                                    <button 
+                                    <button
                                         className={`btn ${approvalData.visibility === 'Current Only' ? 'btn-primary' : 'btn-outline'}`}
                                         onClick={() => setApprovalData(d => ({ ...d, visibility: 'Current Only' }))}
                                         style={{ fontSize: 12 }}
@@ -1077,7 +1118,7 @@ const AdminDashboard = () => {
                                     </button>
                                 </div>
                                 <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-                                    {approvalData.visibility === 'Current Only' 
+                                    {approvalData.visibility === 'Current Only'
                                         ? `Visible only to students graduating in ${new Date().getFullYear() + 1}`
                                         : 'Visible to students of all batches (Past and Current)'}
                                 </p>
@@ -1085,8 +1126,8 @@ const AdminDashboard = () => {
 
                             <div style={{ marginBottom: 20 }}>
                                 <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text-main)' }}>Remarks (Optional)</label>
-                                <textarea 
-                                    className="auth-input-field" 
+                                <textarea
+                                    className="auth-input-field"
                                     style={{ width: '100%', minHeight: 80, padding: 12, borderRadius: 10, border: '1px solid var(--border)' }}
                                     placeholder="Add any instructions or notes for the company..."
                                     value={approvalData.remarks}
@@ -1124,11 +1165,10 @@ const AdminDashboard = () => {
                                     <div style={{ textAlign: 'right' }}>
                                         <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Current Status</div>
                                         <div>
-                                            <span className={`badge ${
-                                                selectedApplication.status === 'Selected' ? 'badge-success' : 
-                                                selectedApplication.status === 'Rejected' ? 'badge-danger' : 
-                                                selectedApplication.status === 'Applied' ? 'badge-blue' : 'badge-warning'
-                                            }`}>
+                                            <span className={`badge ${selectedApplication.status === 'Selected' ? 'badge-success' :
+                                                    selectedApplication.status === 'Rejected' ? 'badge-danger' :
+                                                        selectedApplication.status === 'Applied' ? 'badge-blue' : 'badge-warning'
+                                                }`}>
                                                 {selectedApplication.status}
                                             </span>
                                         </div>
@@ -1137,10 +1177,10 @@ const AdminDashboard = () => {
                             </div>
 
                             <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'var(--text-main)' }}>Timeline</h4>
-                            
+
                             <div style={{ position: 'relative', paddingLeft: 20 }}>
                                 <div style={{ position: 'absolute', left: 5, top: 10, bottom: 10, width: 2, background: 'var(--border)' }}></div>
-                                
+
                                 <div style={{ position: 'relative', marginBottom: 20 }}>
                                     <div style={{ position: 'absolute', left: -21, top: 4, width: 12, height: 12, borderRadius: '50%', background: 'var(--blue)', border: '2px solid white', boxShadow: '0 0 0 1px var(--blue)' }}></div>
                                     <div style={{ fontWeight: 600, fontSize: 14 }}>Applied</div>

@@ -185,3 +185,135 @@ exports.handleEditRequest = async (req, res) => {
         res.status(500).json({ error: 'Action failed' });
     }
 };
+
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find({ role: { $ne: 'admin' } }).lean();
+        const studentIds = users.filter(u => u.role === 'student').map(u => u._id);
+        const companyIds = users.filter(u => u.role === 'company').map(u => u._id);
+        
+        const students = await StudentProfile.find({ user: { $in: studentIds } }).lean();
+        const companies = await CompanyProfile.find({ user: { $in: companyIds } }).lean();
+        
+        const enrichedUsers = users.map(u => {
+            let profile;
+            let profileCompletionStatus = 'Incomplete';
+            if (u.role === 'student') {
+                profile = students.find(s => s.user.toString() === u._id.toString());
+                profileCompletionStatus = profile && profile.education && profile.education.cgpa ? 'Complete' : 'Incomplete';
+            } else {
+                profile = companies.find(c => c.user.toString() === u._id.toString());
+                profileCompletionStatus = profile && profile.companyName ? 'Complete' : 'Incomplete';
+            }
+            return {
+                _id: u._id,
+                fullName: profile ? (profile.name || profile.companyName) : 'N/A',
+                email: u.email,
+                role: u.role,
+                profileCompletionStatus: profileCompletionStatus,
+                approvalStatus: u.isVerified ? 'Approved' : 'Pending'
+            };
+        });
+        
+        res.json({ users: enrichedUsers });
+    } catch (err) {
+        console.error('Get All Users Error:', err);
+        res.status(500).json({ error: 'Server error fetching users' });
+    }
+};
+
+exports.getAllApplications = async (req, res) => {
+    try {
+        const applications = await Application.find()
+            .populate({ path: 'student', populate: { path: 'user', select: 'email' } })
+            .populate({ path: 'job', populate: { path: 'company', select: 'companyName' } })
+            .lean();
+            
+        const enrichedApps = applications.map(app => {
+            return {
+                _id: app._id,
+                studentName: app.student?.name || 'N/A',
+                studentEmail: app.student?.user?.email || 'N/A',
+                appliedCompanyName: app.job?.company?.companyName || 'N/A',
+                jobRole: app.job?.title || 'N/A',
+                applicationDate: app.appliedAt || app.createdAt,
+                status: app.status
+            };
+        });
+        
+        res.json({ applications: enrichedApps });
+    } catch (err) {
+        console.error('Get All Apps Error:', err);
+        res.status(500).json({ error: 'Server error fetching applications' });
+    }
+};
+
+exports.getAllStudentsTracker = async (req, res) => {
+    try {
+        // 1. Get all verified students with their profiles
+        const verifiedStudentUsers = await User.find({ role: 'student', isVerified: true }).lean();
+        const studentUserIds = verifiedStudentUsers.map(u => u._id);
+
+        const studentProfiles = await StudentProfile.find({ user: { $in: studentUserIds } }).lean();
+
+        // 2. For each student profile, get their applications
+        const profileIds = studentProfiles.map(p => p._id);
+
+        const applications = await Application.find({ student: { $in: profileIds } })
+            .populate({
+                path: 'job',
+                select: 'title package location status company',
+                populate: {
+                    path: 'company',
+                    select: 'companyName industry'
+                }
+            })
+            .lean();
+
+        // 3. Group applications by student
+        const appsByStudent = {};
+        applications.forEach(app => {
+            const sid = app.student.toString();
+            if (!appsByStudent[sid]) appsByStudent[sid] = [];
+            appsByStudent[sid].push(app);
+        });
+
+        // 4. Build response
+        const result = studentProfiles.map(profile => {
+            const apps = appsByStudent[profile._id.toString()] || [];
+            const selectedApp = apps.find(a => a.status === 'Selected');
+
+            return {
+                _id: profile._id,
+                name: profile.name,
+                email: profile.emailAddress,
+                branch: profile.education?.branch || profile.branch || '—',
+                degree: profile.education?.degree || '—',
+                cgpa: profile.education?.cgpa || profile.cgpa || '—',
+                passingYear: profile.education?.endYear || profile.passingYear || '—',
+                profilePhoto: profile.profilePhoto || null,
+                totalApplications: apps.length,
+                isPlaced: !!selectedApp,
+                selectedCompany: selectedApp ? {
+                    companyName: selectedApp.job?.company?.companyName || '—',
+                    jobTitle: selectedApp.job?.title || '—',
+                    package: selectedApp.job?.package || 0,
+                } : null,
+                applications: apps.map(a => ({
+                    _id: a._id,
+                    status: a.status,
+                    appliedAt: a.createdAt,
+                    jobTitle: a.job?.title || '—',
+                    companyName: a.job?.company?.companyName || '—',
+                    package: a.job?.package || 0,
+                    location: a.job?.location || '—',
+                }))
+            };
+        });
+
+        res.json(result);
+    } catch (err) {
+        console.error('Student Tracker Error:', err);
+        res.status(500).json({ error: 'Failed to fetch student tracker data', details: err.message });
+    }
+};

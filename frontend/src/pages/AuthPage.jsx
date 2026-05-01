@@ -557,7 +557,7 @@ export default function AuthPage({ initialMode }) {
           {/* Mode switcher footer */}
           <AnimatePresence>
             {!registered && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 transition={{ delay: 0.5, duration: 0.35 }}
                 className="text-center text-sm text-slate-400 mt-6 pt-5 border-t border-slate-100">
                 {mode === 'login'
@@ -576,7 +576,7 @@ export default function AuthPage({ initialMode }) {
                     How it works <ArrowRight size={12} />
                   </button>
                 </div>
-              </motion.p>
+              </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
