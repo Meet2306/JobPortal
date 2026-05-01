@@ -133,6 +133,12 @@ const CompanyDashboard = () => {
                 return;
             }
         }
+
+        if (profile.hrContactNumber && !/^[789]\d{9}$/.test(profile.hrContactNumber)) {
+            setMsg({ type: 'error', text: 'HR Phone must be exactly 10 digits and start with 7, 8, or 9' });
+            return;
+        }
+
         try { await api.put('/company/profile', profile); setMsg({ type: 'success', text: 'Profile updated!' }); fetchProfile(); }
         catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Update failed' }); }
     };
@@ -346,10 +352,10 @@ const CompanyDashboard = () => {
                                         <ResponsiveContainer width="100%" height={220}>
                                             <BarChart data={applicantsPerJob}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#E8EAF0" vertical={false} />
-                                                <XAxis dataKey="title" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
-                                                <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                                                <XAxis dataKey="title" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} interval={0} angle={-15} textAnchor="end" />
+                                                <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} allowDecimals={false} axisLine={false} tickLine={false} />
                                                 <Tooltip content={<CustomTooltip />} />
-                                                <Bar dataKey="applications" fill="#4F46E5" radius={[6, 6, 0, 0]} name="Applications" />
+                                                <Bar dataKey="applications" fill="#4F46E5" radius={[6, 6, 0, 0]} name="Applications" maxBarSize={40} />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -461,7 +467,7 @@ const CompanyDashboard = () => {
                                                         <label className="form-label">HR Phone</label>
                                                         <div className="input-group">
                                                             <div className="input-group-icon"><Phone size={16} /></div>
-                                                            <input className="form-control" value={profile.hrContactNumber || ''} onChange={e => setProfile({ ...profile, hrContactNumber: e.target.value })} disabled={isLocked} />
+                                                            <input className="form-control" maxLength="10" placeholder="e.g. 9876543210" value={profile.hrContactNumber || ''} onChange={e => setProfile({ ...profile, hrContactNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })} disabled={isLocked} />
                                                         </div>
                                                     </div>
                                                 </div>

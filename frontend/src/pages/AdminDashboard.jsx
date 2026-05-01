@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
-import {
-    LogOut, ShieldCheck, BarChart3, Users, Briefcase,
+import {LogOut, ShieldCheck, BarChart3, Users, Briefcase,
     FileCheck, Building2, TrendingUp, CheckCircle, XCircle,
-    Bell, ChevronRight, Award, Search, Filter, Layers
+    Bell, ChevronRight, Award
 } from 'lucide-react';
 import {
     BarChart, Bar, PieChart, Pie, Cell,
@@ -37,6 +36,7 @@ const NAV = [
     { key: 'jobs', label: 'Job Approvals', icon: Briefcase },
     { key: 'edits', label: 'Edit Requests', icon: FileCheck },
     { key: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { key: 'students', label: 'Student Tracker', icon: GraduationCap },
 ];
 
 const AdminDashboard = () => {
@@ -49,25 +49,14 @@ const AdminDashboard = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [jobToApprove, setJobToApprove] = useState(null);
     const [approvalData, setApprovalData] = useState({ visibility: 'All', remarks: '' });
+    
+    const [students, setStudents] = useState([]);
+    const [studentSearch, setStudentSearch] = useState('');
+    const [studentFilter, setStudentFilter] = useState('all'); // 'all' | 'placed' | 'unplaced'
+    const [expandedStudent, setExpandedStudent] = useState(null); // student _id being expanded
+    const [studentsLoading, setStudentsLoading] = useState(false);
 
-    // New states for User Management and Application Tracking
-    const [allUsers, setAllUsers] = useState([]);
-    const [allApplications, setAllApplications] = useState([]);
-    const [userSearchTerm, setUserSearchTerm] = useState('');
-    const [userFilterStatus, setUserFilterStatus] = useState('All');
-    const [appSearchTerm, setAppSearchTerm] = useState('');
-    const [appFilterStatus, setAppFilterStatus] = useState('All');
-    const [selectedApplication, setSelectedApplication] = useState(null);
-
-    useEffect(() => { 
-        fetchPending(); 
-        fetchAnalytics(); 
-    }, []);
-
-    useEffect(() => {
-        if (activeNav === 'all-users') fetchAllUsers();
-        if (activeNav === 'applications') fetchAllApplications();
-    }, [activeNav]);
+    useEffect(() => { fetchPending(); fetchAnalytics(); }, []);
 
     const fetchPending = async () => {
         try { 
@@ -82,24 +71,6 @@ const AdminDashboard = () => {
 
     const fetchAnalytics = async () => {
         try { const r = await api.get('/admin/analytics'); setAnalytics(r.data); } catch (e) {}
-    };
-
-    const fetchAllUsers = async () => {
-        try {
-            const r = await api.get('/admin/users');
-            setAllUsers(r.data);
-        } catch (e) {
-            console.error('Fetch All Users Error:', e);
-        }
-    };
-
-    const fetchAllApplications = async () => {
-        try {
-            const r = await api.get('/admin/applications');
-            setAllApplications(r.data);
-        } catch (e) {
-            console.error('Fetch Applications Error:', e);
-        }
     };
 
     const verifyUser = async (id) => {
@@ -622,8 +593,6 @@ const AdminDashboard = () => {
                                 <div className="stat-grid stagger" style={{ marginBottom: 24 }}>
                                     {[
                                         { label: 'Total Selected', value: analytics.totalSelected, icon: CheckCircle, color: 'var(--success)', soft: 'var(--success-soft)' },
-                                        { label: 'Highest Package', value: `₹${analytics.packageStats?.highest?.toFixed(1)} LPA`, icon: TrendingUp, color: 'var(--primary)', soft: 'var(--primary-soft)' },
-                                        { label: 'Average Package', value: `₹${analytics.packageStats?.avg?.toFixed(1)} LPA`, icon: Award, color: 'var(--blue)', soft: 'var(--blue-soft)' },
                                         { label: 'Companies Active', value: analytics.companyHiringData?.length || 0, icon: Building2, color: 'var(--purple)', soft: 'var(--purple-soft)' },
                                     ].map((card, i) => {
                                         const Icon = card.icon;
@@ -649,10 +618,10 @@ const AdminDashboard = () => {
                                         <ResponsiveContainer width="100%" height={240}>
                                             <BarChart data={companyHiringBar} layout="vertical">
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#E8EAF0" horizontal={false} />
-                                                <XAxis type="number" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                                                <XAxis type="number" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} allowDecimals={false} />
                                                 <YAxis dataKey="company" type="category" tick={{ fontSize: 11, fill: '#9CA3AF' }} axisLine={false} tickLine={false} width={90} />
                                                 <Tooltip content={<CustomTooltip />} />
-                                                <Bar dataKey="selections" fill="var(--primary)" radius={[0, 6, 6, 0]} name="Selections" />
+                                                <Bar dataKey="selections" fill="var(--primary)" radius={[0, 6, 6, 0]} name="Selections" maxBarSize={30} />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
@@ -703,6 +672,318 @@ const AdminDashboard = () => {
                                     </table>
                                 </div>
                             </>
+                        )}
+
+                        {/* ── STUDENT TRACKER ── */}
+                        {activeNav === 'students' && (
+                            <div>
+                                {/* Header Banner */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                    borderRadius: 'var(--r-2xl)', padding: '24px 28px',
+                                    marginBottom: 20, color: 'white',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                }}>
+                                    <div>
+                                        <p style={{ opacity: 0.85, fontSize: 13, marginBottom: 4 }}>Placement Overview</p>
+                                        <h2 style={{ fontSize: 20, fontWeight: 800, color: 'white', marginBottom: 4 }}>
+                                            Student Tracker
+                                        </h2>
+                                        <p style={{ opacity: 0.8, fontSize: 13 }}>
+                                            View all students, their applications, and placement status
+                                        </p>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 32, fontWeight: 900, color: 'white' }}>
+                                            {students.filter(s => s.isPlaced).length}
+                                        </div>
+                                        <div style={{ opacity: 0.8, fontSize: 13 }}>Students Placed</div>
+                                    </div>
+                                </div>
+
+                                {/* Summary Stats Row */}
+                                <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                                    {[
+                                        { label: 'Total Students', value: students.length, color: '#4F46E5', soft: 'rgba(79,70,229,0.1)' },
+                                        { label: 'Placed', value: students.filter(s => s.isPlaced).length, color: '#059669', soft: 'rgba(5,150,105,0.1)' },
+                                        { label: 'Not Placed', value: students.filter(s => !s.isPlaced).length, color: '#D97706', soft: 'rgba(217,119,6,0.1)' },
+                                        { label: 'Total Applications', value: students.reduce((a, s) => a + s.totalApplications, 0), color: '#7C3AED', soft: 'rgba(124,58,237,0.1)' },
+                                    ].map((stat, i) => (
+                                        <div key={i} className="stat-card" style={{
+                                            '--stat-color': stat.color, '--stat-soft': stat.soft,
+                                            flex: '1 1 140px', minWidth: 140
+                                        }}>
+                                            <div className="stat-card-label">{stat.label}</div>
+                                            <div className="stat-card-value">{stat.value}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Search + Filter Bar */}
+                                <div className="card" style={{ marginBottom: 16, padding: '14px 16px' }}>
+                                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                                        {/* Search */}
+                                        <div style={{ position: 'relative', flex: '1 1 220px' }}>
+                                            <Search size={15} style={{
+                                                position: 'absolute', left: 10, top: '50%',
+                                                transform: 'translateY(-50%)', color: 'var(--text-muted)'
+                                            }} />
+                                            <input
+                                                type="text"
+                                                placeholder="Search by name, branch, company..."
+                                                value={studentSearch}
+                                                onChange={e => setStudentSearch(e.target.value)}
+                                                style={{
+                                                    width: '100%', paddingLeft: 32, paddingRight: 12,
+                                                    height: 36, borderRadius: 8, fontSize: 13,
+                                                    border: '1px solid var(--border)',
+                                                    background: 'var(--bg)', color: 'var(--text)',
+                                                    outline: 'none', boxSizing: 'border-box'
+                                                }}
+                                            />
+                                        </div>
+                                        {/* Filter Buttons */}
+                                        <div style={{ display: 'flex', gap: 6 }}>
+                                            {[
+                                                { key: 'all',      label: 'All Students' },
+                                                { key: 'placed',   label: '✅ Placed'    },
+                                                { key: 'unplaced', label: '⏳ Not Placed' },
+                                            ].map(f => (
+                                                <button key={f.key} onClick={() => setStudentFilter(f.key)}
+                                                    style={{
+                                                        padding: '6px 14px', borderRadius: 20, fontSize: 12,
+                                                        fontWeight: 600, cursor: 'pointer',
+                                                        background: studentFilter === f.key ? 'var(--primary)' : 'var(--bg)',
+                                                        color: studentFilter === f.key ? 'white' : 'var(--text-muted)',
+                                                        border: studentFilter === f.key ? 'none' : '1px solid var(--border)',
+                                                        transition: 'all 0.15s'
+                                                    }}>
+                                                    {f.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Student List */}
+                                {studentsLoading ? (
+                                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+                                        Loading students...
+                                    </div>
+                                ) : (() => {
+                                    const q = studentSearch.toLowerCase();
+                                    const filtered = students.filter(s => {
+                                        const matchSearch = !q
+                                            || s.name?.toLowerCase().includes(q)
+                                            || s.branch?.toLowerCase().includes(q)
+                                            || s.email?.toLowerCase().includes(q)
+                                            || s.selectedCompany?.companyName?.toLowerCase().includes(q)
+                                            || s.applications?.some(a => a.companyName?.toLowerCase().includes(q));
+                                        const matchFilter =
+                                            studentFilter === 'all' ||
+                                            (studentFilter === 'placed' && s.isPlaced) ||
+                                            (studentFilter === 'unplaced' && !s.isPlaced);
+                                        return matchSearch && matchFilter;
+                                    });
+
+                                    if (filtered.length === 0) return (
+                                        <div className="card">
+                                            <div className="empty-state">
+                                                <div className="empty-state-icon" style={{ margin: '0 auto 12px' }}>
+                                                    <GraduationCap size={24} />
+                                                </div>
+                                                <h3>No students found</h3>
+                                                <p>Try adjusting your search or filter</p>
+                                            </div>
+                                        </div>
+                                    );
+
+                                    return (
+                                        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                                <thead>
+                                                    <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+                                                        {['Student', 'Branch / CGPA', 'Applications', 'Status', 'Selected Company', ''].map((h, i) => (
+                                                            <th key={i} style={{
+                                                                padding: '12px 16px', textAlign: 'left',
+                                                                fontSize: 12, fontWeight: 600,
+                                                                color: 'var(--text-muted)', whiteSpace: 'nowrap'
+                                                            }}>{h}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {filtered.map((s, idx) => (
+                                                        <React.Fragment key={s._id}>
+                                                            {/* Main Row */}
+                                                            <tr style={{
+                                                                borderBottom: '1px solid var(--border)',
+                                                                background: expandedStudent === s._id ? 'rgba(79,70,229,0.04)' : 'transparent',
+                                                                transition: 'background 0.15s'
+                                                            }}>
+                                                                {/* Student Name + Email */}
+                                                                <td style={{ padding: '12px 16px' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                                        <div style={{
+                                                                            width: 34, height: 34, borderRadius: '50%',
+                                                                            background: s.isPlaced ? 'rgba(5,150,105,0.15)' : 'rgba(79,70,229,0.12)',
+                                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                            fontSize: 13, fontWeight: 700,
+                                                                            color: s.isPlaced ? '#059669' : '#4F46E5', flexShrink: 0,
+                                                                            overflow: 'hidden'
+                                                                        }}>
+                                                                            {s.profilePhoto
+                                                                                ? <img src={s.profilePhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                                                                : s.name?.charAt(0)?.toUpperCase() || 'S'
+                                                                            }
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{s.name || '—'}</div>
+                                                                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.email || '—'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+
+                                                                {/* Branch / CGPA */}
+                                                                <td style={{ padding: '12px 16px' }}>
+                                                                    <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{s.branch}</div>
+                                                                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                                                        CGPA: <strong style={{ color: 'var(--text)' }}>{s.cgpa}</strong>
+                                                                        {s.passingYear && ` · ${s.passingYear}`}
+                                                                    </div>
+                                                                </td>
+
+                                                                {/* Applications count */}
+                                                                <td style={{ padding: '12px 16px' }}>
+                                                                    <span style={{
+                                                                        background: 'rgba(79,70,229,0.1)', color: '#4F46E5',
+                                                                        borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700
+                                                                    }}>
+                                                                        {s.totalApplications} applied
+                                                                    </span>
+                                                                </td>
+
+                                                                {/* Placement Status Badge */}
+                                                                <td style={{ padding: '12px 16px' }}>
+                                                                    {s.isPlaced ? (
+                                                                        <span className="badge badge-success">✅ Placed</span>
+                                                                    ) : s.totalApplications > 0 ? (
+                                                                        <span className="badge badge-warning">⏳ In Process</span>
+                                                                    ) : (
+                                                                        <span className="badge" style={{ background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                                                                            Not Applied
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+
+                                                                {/* Selected Company */}
+                                                                <td style={{ padding: '12px 16px' }}>
+                                                                    {s.isPlaced ? (
+                                                                        <div>
+                                                                            <div style={{ fontWeight: 600, fontSize: 13, color: '#059669' }}>
+                                                                                {s.selectedCompany?.companyName}
+                                                                            </div>
+                                                                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                                                                {s.selectedCompany?.jobTitle}
+                                                                                {s.selectedCompany?.package > 0 && ` · ₹${s.selectedCompany.package} LPA`}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
+                                                                    )}
+                                                                </td>
+
+                                                                {/* Expand Button */}
+                                                                <td style={{ padding: '12px 16px' }}>
+                                                                    {s.totalApplications > 0 && (
+                                                                        <button
+                                                                            onClick={() => setExpandedStudent(expandedStudent === s._id ? null : s._id)}
+                                                                            style={{
+                                                                                background: 'none', border: '1px solid var(--border)',
+                                                                                borderRadius: 6, padding: '4px 10px',
+                                                                                cursor: 'pointer', fontSize: 12,
+                                                                                color: 'var(--text-muted)',
+                                                                                transition: 'all 0.15s'
+                                                                            }}>
+                                                                            {expandedStudent === s._id ? '▲ Hide' : '▼ Details'}
+                                                                        </button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+
+                                                            {/* Expanded Applications Row */}
+                                                            {expandedStudent === s._id && s.applications?.length > 0 && (
+                                                                <tr key={`${s._id}-exp`}>
+                                                                    <td colSpan={6} style={{ padding: 0, background: 'rgba(79,70,229,0.03)' }}>
+                                                                        <div style={{ padding: '12px 20px 16px 60px', borderBottom: '2px solid var(--border)' }}>
+                                                                            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                                                All Applications ({s.applications.length})
+                                                                            </div>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                                                {s.applications.map((app, ai) => {
+                                                                                    const statusColors = {
+                                                                                        'Applied':              { bg: 'rgba(37,99,235,0.1)',   color: '#2563EB' },
+                                                                                        'Shortlisted':          { bg: 'rgba(217,119,6,0.1)',  color: '#D97706' },
+                                                                                        'Interview Scheduled':  { bg: 'rgba(124,58,237,0.1)', color: '#7C3AED' },
+                                                                                        'Selected':             { bg: 'rgba(5,150,105,0.1)',  color: '#059669' },
+                                                                                        'Rejected':             { bg: 'rgba(220,38,38,0.1)',  color: '#DC2626' },
+                                                                                    };
+                                                                                    const sc = statusColors[app.status] || { bg: 'var(--bg)', color: 'var(--text-muted)' };
+                                                                                    return (
+                                                                                        <div key={ai} style={{
+                                                                                            display: 'flex', alignItems: 'center',
+                                                                                            gap: 12, padding: '8px 12px',
+                                                                                            background: 'var(--surface)',
+                                                                                            borderRadius: 8, flexWrap: 'wrap',
+                                                                                            border: app.status === 'Selected' ? '1px solid rgba(5,150,105,0.3)' : '1px solid transparent'
+                                                                                        }}>
+                                                                                            {/* Company + Job */}
+                                                                                            <div style={{ flex: '1 1 160px', minWidth: 120 }}>
+                                                                                                <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
+                                                                                                    {app.companyName}
+                                                                                                </div>
+                                                                                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                                                                                    {app.jobTitle}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            {/* Package */}
+                                                                                            {app.package > 0 && (
+                                                                                                <div style={{ fontSize: 12, color: '#4F46E5', fontWeight: 700, minWidth: 70 }}>
+                                                                                                    ₹{app.package} LPA
+                                                                                                </div>
+                                                                                            )}
+                                                                                            {/* Location */}
+                                                                                            <div style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 80 }}>
+                                                                                                📍 {app.location}
+                                                                                            </div>
+                                                                                            {/* Applied Date */}
+                                                                                            <div style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 80 }}>
+                                                                                                {new Date(app.appliedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                                            </div>
+                                                                                            {/* Status Badge */}
+                                                                                            <span style={{
+                                                                                                background: sc.bg, color: sc.color,
+                                                                                                borderRadius: 20, padding: '3px 10px',
+                                                                                                fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap'
+                                                                                            }}>
+                                                                                                {app.status}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
                         )}
 
                     </div>

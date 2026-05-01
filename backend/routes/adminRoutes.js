@@ -13,7 +13,5 @@ router.delete('/users/:userId/reject', adminController.rejectUser);
 router.patch('/profiles/:profileId/edit-permission', adminController.handleEditRequest);
 router.patch('/jobs/:jobId/approve', adminController.approveJob);
 router.get('/analytics', adminController.getAnalytics);
-router.get('/users', adminController.getAllUsers);
-router.get('/applications', adminController.getAllApplications);
 
 module.exports = router;
