@@ -233,3 +233,23 @@ exports.uploadResume = async (req, res) => {
         res.status(500).json({ error: 'Upload failed' });
     }
 };
+
+exports.submitProfileForApproval = async (req, res) => {
+    try {
+        const profile = await StudentProfile.findOne({ user: req.user.id });
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+        
+        // Backend validation removed as per user request. 
+        // Relying entirely on frontend dashboard checks.
+        
+        profile.status = 'Pending';
+        profile.editRequestStatus = 'None';
+        profile.isProfileComplete = true; // Automatically mark complete since frontend allowed submission
+        profile.isLocked = true;
+        await profile.save();
+        res.json({ message: 'Profile submitted for admin approval successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error submitting profile' });
+    }
+};

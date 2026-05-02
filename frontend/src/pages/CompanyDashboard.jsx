@@ -49,17 +49,22 @@ const NAV = [
 const CompanyDashboard = () => {
     const { user, logout } = useContext(AuthContext);
     const [activeNav, setActiveNav] = useState('overview');
-    const [profile, setProfile] = useState({ companyName: '', industry: '', websiteUrl: '', hrContactName: '', hrContactEmail: '', hrContactNumber: '', description: '', isLocked: false, editRequestStatus: 'None' });
+    const [profile, setProfile] = useState({
+        companyName: '', industry: '', websiteUrl: '', hrContactName: '', hrContactEmail: '', hrContactNumber: '',
+        description: '', phoneNumber: '', address: '', gstNumber: '', isRegistered: false,
+        registrationDocument: '', companyLogo: '',
+        isLocked: false, editRequestStatus: 'None', status: '', rejectionReason: ''
+    });
     const [jobs, setJobs] = useState([]);
     const [applicants, setApplicants] = useState([]);
     const [selectedJob, setSelectedJob] = useState(null);
     const [msg, setMsg] = useState({ type: '', text: '' });
-    const [new_job, setNewJob] = useState({ 
-        title: '', 
+    const [new_job, setNewJob] = useState({
+        title: '',
         package: '',
-        location: '', 
-        description: '', 
-        requiredSkills: '', 
+        location: '',
+        description: '',
+        requiredSkills: '',
         requiredStudents: 1,
         appStartDate: '',
         appCloseDate: '',
@@ -80,18 +85,24 @@ const CompanyDashboard = () => {
     }, [activeNav]);
 
     const fetchProfile = async () => {
-        try { 
-            const r = await api.get('/company/profile'); 
-            if (r.data) setProfile({ ...r.data }); 
+        try {
+            const r = await api.get('/company/profile');
+            if (r.data) {
+                setProfile({ ...r.data });
+                if (!r.data.isProfileComplete && r.data.status !== 'Approved') {
+                    setActiveNav('profile');
+                    setMsg({ type: 'warning', text: 'First Complete profile' });
+                }
+            }
         } catch (e) {
             console.error('Fetch Profile Error:', e);
         }
     };
 
     const fetchJobs = async () => {
-        try { 
-            const r = await api.get('/company/jobs'); 
-            setJobs(r.data); 
+        try {
+            const r = await api.get('/company/jobs');
+            setJobs(r.data);
         } catch (e) {
             console.error('Fetch Jobs Error:', e);
             const errMsg = e.response?.data?.error || 'Failed to load job listings. Please refresh.';
@@ -101,7 +112,7 @@ const CompanyDashboard = () => {
 
     const fetchApplicants = async (jobId) => {
         setSelectedJob(jobId);
-        try { const r = await api.get(`/company/jobs/${jobId}/applicants`); setApplicants(r.data); setActiveNav('applicants'); } catch (e) {}
+        try { const r = await api.get(`/company/jobs/${jobId}/applicants`); setApplicants(r.data); setActiveNav('applicants'); } catch (e) { }
     };
 
     const fetchAllApplicants = async () => {
@@ -139,8 +150,63 @@ const CompanyDashboard = () => {
             return;
         }
 
-        try { await api.put('/company/profile', profile); setMsg({ type: 'success', text: 'Profile updated!' }); fetchProfile(); }
+        try { await api.put('/company/profile', profile); setMsg({ type: 'success', text: 'Profile saved!' }); fetchProfile(); }
         catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Update failed' }); }
+    };
+
+    const handleSubmitForApproval = async () => {
+        // Validation checks
+        const reqFields = [
+            { key: 'companyName', label: 'Company Name' },
+            { key: 'industry', label: 'Industry' },
+            { key: 'websiteUrl', label: 'Website URL' },
+            { key: 'description', label: 'About Company' },
+            { key: 'hrContactName', label: 'HR Name' },
+            { key: 'hrContactEmail', label: 'HR Email' },
+            { key: 'hrContactNumber', label: 'HR Phone' }
+        ];
+
+        for (let field of reqFields) {
+            if (!profile[field.key] || profile[field.key].toString().trim() === '') {
+                setMsg({ type: 'error', text: `Please fill out your ${field.label}` });
+                return;
+            }
+        }
+
+        if (profile.hrContactNumber && !/^[789]\d{9}$/.test(profile.hrContactNumber)) {
+            setMsg({ type: 'error', text: 'HR Phone must be exactly 10 digits and start with 7, 8, or 9' });
+            return;
+        }
+
+        if (profile.isRegistered && !profile.registrationDocument) {
+            setMsg({ type: 'error', text: 'Please upload your Registration Document since your company is registered.' });
+            return;
+        }
+
+        try {
+            await api.put('/company/profile', profile); // Auto-save first
+            await api.post('/company/submit-profile');
+            setMsg({ type: 'success', text: 'your profile request sent to admin approval' });
+            fetchProfile();
+        } catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Submission failed' }); }
+    };
+
+    const handleFileUpload = async (e, type) => {
+        if (!e.target.files[0]) return;
+        const fd = new FormData();
+        const endpoint = type === 'logo' ? '/company/upload-logo' : '/company/upload-registration';
+        fd.append(type === 'logo' ? 'logo' : 'registration', e.target.files[0]);
+        try {
+            const { data } = await api.post(endpoint, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+            if (type === 'logo') {
+                setProfile({ ...profile, companyLogo: data.url });
+            } else {
+                setProfile({ ...profile, registrationDocument: data.url });
+            }
+            setMsg({ type: 'success', text: `${type === 'logo' ? 'Logo' : 'Document'} uploaded successfully!` });
+        } catch (err) {
+            setMsg({ type: 'error', text: `Failed to upload ${type}` });
+        }
     };
 
     const requestEdit = async () => {
@@ -151,8 +217,8 @@ const CompanyDashboard = () => {
     const postJob = async (e) => {
         e.preventDefault();
         try {
-            const payload = { 
-                ...new_job, 
+            const payload = {
+                ...new_job,
                 package: parseFloat(new_job.package) || 0,
                 minCGPA: parseFloat(new_job.minCGPA) || 0,
                 eligibleBranches: new_job.eligibleBranches.split(',').map(s => s.trim()).filter(s => s),
@@ -160,8 +226,8 @@ const CompanyDashboard = () => {
             };
             await api.post('/company/jobs', payload);
             setMsg({ type: 'success', text: 'Job posted successfully!' });
-            setNewJob({ 
-                title: '', package: '', location: '', description: '', 
+            setNewJob({
+                title: '', package: '', location: '', description: '',
                 requiredSkills: '', requiredStudents: 1, appStartDate: '', appCloseDate: '',
                 minCGPA: '', eligibleBranches: ''
             });
@@ -170,12 +236,12 @@ const CompanyDashboard = () => {
     };
 
     const updateApplicantStatus = async (appId, status, isGlobal = false) => {
-        try { 
-            await api.patch(`/company/applications/${appId}/status`, { status }); 
+        try {
+            await api.patch(`/company/applications/${appId}/status`, { status });
             if (isGlobal) {
                 fetchAllApplicants();
             } else {
-                fetchApplicants(selectedJob); 
+                fetchApplicants(selectedJob);
             }
         }
         catch (e) { setMsg({ type: 'error', text: 'Failed to update status. Invalid transition or server error.' }); }
@@ -190,12 +256,12 @@ const CompanyDashboard = () => {
             'Rejected': ['Rejected']
         };
         const validStatuses = transitions[app.status] || [app.status];
-        
+
         return (
-            <select 
-                className="form-select" 
-                style={{ height: 32, fontSize: 11 }} 
-                value={app.status} 
+            <select
+                className="form-select"
+                style={{ height: 32, fontSize: 11 }}
+                value={app.status}
                 onChange={e => updateApplicantStatus(app._id, e.target.value, isGlobal)}
                 disabled={app.status === 'Selected' || app.status === 'Rejected'}
             >
@@ -217,10 +283,10 @@ const CompanyDashboard = () => {
     // Filters for All Applicants
     const filteredAllApplicants = allApplicants.filter(app => {
         const searchStr = applicantSearchTerm.toLowerCase();
-        const matchesSearch = (app.student?.name || '').toLowerCase().includes(searchStr) || 
-                              (app.student?.skills?.technical || []).some(s => s.toLowerCase().includes(searchStr)) ||
-                              (app.student?.skills?.soft || []).some(s => s.toLowerCase().includes(searchStr));
-        
+        const matchesSearch = (app.student?.name || '').toLowerCase().includes(searchStr) ||
+            (app.student?.skills?.technical || []).some(s => s.toLowerCase().includes(searchStr)) ||
+            (app.student?.skills?.soft || []).some(s => s.toLowerCase().includes(searchStr));
+
         const matchesStatus = applicantStatusFilter === 'All' || app.status === applicantStatusFilter;
         const matchesJob = applicantJobFilter === 'All' || app.job?._id === applicantJobFilter;
 
@@ -279,9 +345,9 @@ const CompanyDashboard = () => {
                         </div>
                     </div>
                     <div className="navbar-right">
-                        <div className={`navbar-status badge ${user.isVerified ? 'badge-success' : 'badge-warning'}`}>
+                        <div className={`navbar-status badge ${profile.status === 'Approved' ? 'badge-success' : profile.status === 'Rejected' ? 'badge-danger' : 'badge-warning'}`}>
                             <span className="badge-dot"></span>
-                            {user.isVerified ? 'Verified Company' : 'Pending Approval'}
+                            {profile.status || 'Draft'}
                         </div>
                         <button className="navbar-icon-btn"><Bell size={16} /></button>
                         <div className="navbar-profile">
@@ -296,15 +362,15 @@ const CompanyDashboard = () => {
 
                 <div className="page-content">
                     {/* Unverified notice */}
-                    {!user.isVerified && (activeNav === 'post' || activeNav === 'listings' || activeNav === 'applicants') && (
+                    {profile.status !== 'Approved' && (activeNav === 'post' || activeNav === 'listings' || activeNav === 'applicants' || activeNav === 'all-applicants') && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
                             <div className="card animate-scale-in" style={{ maxWidth: 400, textAlign: 'center', padding: '48px 40px' }}>
                                 <div style={{ width: 60, height: 60, background: 'var(--warning-soft)', borderRadius: 'var(--r-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                                     <AlertCircle size={30} color="var(--warning)" />
                                 </div>
                                 <h2 style={{ fontSize: 18, marginBottom: 10 }}>Pending Approval</h2>
-                                <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.7, marginBottom: 24 }}>Your company account is awaiting admin verification. Complete your company profile to expedite this process.</p>
-                                <button className="btn btn-primary btn-full" onClick={() => setActiveNav('profile')}>Complete Profile →</button>
+                                <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.7, marginBottom: 24 }}>Your company profile needs to be approved by the admin. Complete your company profile to expedite this process.</p>
+                                <button className="btn btn-primary btn-full" onClick={() => setActiveNav('profile')}>Go to Profile →</button>
                             </div>
                         </div>
                     )}
@@ -408,6 +474,17 @@ const CompanyDashboard = () => {
                                         )}
                                     </div>
                                 )}
+                                {profile.status === 'Rejected' && (
+                                    <div className="alert alert-danger" style={{ marginBottom: 20 }}>
+                                        <strong>Profile Rejected:</strong> {profile.rejectionReason}
+                                        <br />Please make the necessary changes and submit again.
+                                    </div>
+                                )}
+                                {profile.status === 'Pending' && (
+                                    <div className="alert alert-warning" style={{ marginBottom: 20 }}>
+                                        Your profile is currently pending admin approval. You cannot make edits at this time.
+                                    </div>
+                                )}
 
                                 <div className="card">
                                     <form onSubmit={updateProfile}>
@@ -425,16 +502,7 @@ const CompanyDashboard = () => {
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label">Industry</label>
-                                                    <select className="form-select" value={profile.industry || ''} onChange={e => setProfile({ ...profile, industry: e.target.value })} disabled={isLocked}>
-                                                        <option value="">Select...</option>
-                                                        <option value="Technology">Technology</option>
-                                                        <option value="Finance">Finance & Banking</option>
-                                                        <option value="Healthcare">Healthcare</option>
-                                                        <option value="Education">Education</option>
-                                                        <option value="Manufacturing">Manufacturing</option>
-                                                        <option value="Consulting">Consulting</option>
-                                                        <option value="E-commerce">E-commerce</option>
-                                                    </select>
+                                                    <input type="text" className="form-control" value={profile.industry || ''} onChange={e => setProfile({ ...profile, industry: e.target.value })} disabled={isLocked} placeholder="e.g. Technology, Finance, etc." />
                                                 </div>
                                             </div>
                                             <div className="form-group">
@@ -447,6 +515,49 @@ const CompanyDashboard = () => {
                                             <div className="form-group">
                                                 <label className="form-label">About Company</label>
                                                 <textarea className="form-textarea" rows={3} value={profile.description || ''} onChange={e => setProfile({ ...profile, description: e.target.value })} disabled={isLocked} placeholder="Brief company description..." />
+                                            </div>
+
+                                            <div className="grid-2" style={{ gap: 16 }}>
+                                                <div className="form-group">
+                                                    <label className="form-label">Phone Number (Company)</label>
+                                                    <div className="input-group">
+                                                        <div className="input-group-icon"><Phone size={16} /></div>
+                                                        <input className="form-control" value={profile.phoneNumber || ''} onChange={e => setProfile({ ...profile, phoneNumber: e.target.value })} disabled={isLocked} />
+                                                    </div>
+                                                </div>
+                                                <div className="form-group">
+                                                    <label className="form-label">GST / Registration Number</label>
+                                                    <input className="form-control" value={profile.gstNumber || ''} onChange={e => setProfile({ ...profile, gstNumber: e.target.value })} disabled={isLocked} />
+                                                </div>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Full Address</label>
+                                                <textarea className="form-textarea" rows={2} value={profile.address || ''} onChange={e => setProfile({ ...profile, address: e.target.value })} disabled={isLocked} />
+                                            </div>
+
+                                            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
+                                                <div className="form-group">
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+                                                        <input type="checkbox" checked={profile.isRegistered} onChange={e => setProfile({ ...profile, isRegistered: e.target.checked })} disabled={isLocked} style={{ width: 16, height: 16 }} />
+                                                        Is this company registered?
+                                                    </label>
+                                                </div>
+                                                {profile.isRegistered && (
+                                                    <div className="form-group">
+                                                        <label className="form-label">Registration Certificate (PDF/Image)</label>
+                                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                                            {profile.registrationDocument && <a href={profile.registrationDocument} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">View Current</a>}
+                                                            <input type="file" className="form-control" onChange={e => handleFileUpload(e, 'registration')} disabled={isLocked} accept=".pdf,.png,.jpg,.jpeg" style={{ padding: '8px' }} />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="form-group">
+                                                    <label className="form-label">Company Logo (Image)</label>
+                                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                                        {profile.companyLogo && <img src={profile.companyLogo} alt="Logo" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />}
+                                                        <input type="file" className="form-control" onChange={e => handleFileUpload(e, 'logo')} disabled={isLocked} accept=".png,.jpg,.jpeg" style={{ padding: '8px' }} />
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
@@ -474,7 +585,10 @@ const CompanyDashboard = () => {
                                             </div>
                                         </div>
                                         <div style={{ paddingTop: 20, marginTop: 20, borderTop: '1px solid var(--border)' }}>
-                                            <button type="submit" className="btn btn-primary" disabled={isLocked}>Save Changes</button>
+                                            <div style={{ display: 'flex', gap: 12 }}>
+                                                <button type="submit" className="btn btn-outline" disabled={isLocked || profile.status === 'Pending'}>Save Draft</button>
+                                                <button type="button" onClick={handleSubmitForApproval} className="btn btn-primary" disabled={isLocked || profile.status === 'Pending'}>Submit for Approval</button>
+                                            </div>
                                         </div>
                                     </form>
                                 </div>
@@ -482,7 +596,7 @@ const CompanyDashboard = () => {
                         )}
 
                         {/* ── POST JOB ── */}
-                        {activeNav === 'post' && user.isVerified && (
+                        {activeNav === 'post' && profile.status === 'Approved' && (
                             <div style={{ maxWidth: 720 }}>
                                 <div className="page-header">
                                     <h1>Post a Job</h1>
@@ -496,7 +610,7 @@ const CompanyDashboard = () => {
                                                 <label className="form-label">Job Title</label>
                                                 <input className="form-control" required value={new_job.title} onChange={e => setNewJob({ ...new_job, title: e.target.value })} placeholder="Software Engineer" />
                                             </div>
-                                             <div className="grid-2" style={{ gap: 16 }}>
+                                            <div className="grid-2" style={{ gap: 16 }}>
                                                 <div className="form-group">
                                                     <label className="form-label">Package (LPA)</label>
                                                     <input type="number" className="form-control" step="0.01" value={new_job.package} onChange={e => setNewJob({ ...new_job, package: e.target.value })} placeholder="e.g. 12" required />
@@ -510,14 +624,27 @@ const CompanyDashboard = () => {
                                                 <label className="form-label">Required Students (Limit)</label>
                                                 <input type="number" className="form-control" value={new_job.requiredStudents} onChange={e => setNewJob({ ...new_job, requiredStudents: parseInt(e.target.value) || 1 })} min="1" />
                                             </div>
-                                             <div className="grid-2" style={{ gap: 16 }}>
+                                            <div className="grid-2" style={{ gap: 16 }}>
                                                 <div className="form-group">
-                                                    <label className="form-label">Required Skills (Comma separated)</label>
+                                                    <label className="form-label">Required Skills</label>
                                                     <input className="form-control" value={new_job.requiredSkills} onChange={e => setNewJob({ ...new_job, requiredSkills: e.target.value })} placeholder="React, Node.js, Python" />
                                                 </div>
                                                 <div className="form-group">
-                                                    <label className="form-label">Eligible Branches (CSV)</label>
-                                                    <input className="form-control" value={new_job.eligibleBranches} onChange={e => setNewJob({ ...new_job, eligibleBranches: e.target.value })} placeholder="Computer Engineering, IT" />
+                                                    <label className="form-label">Eligible Branches</label>
+                                                    <select multiple className="form-control" style={{ minHeight: '120px' }} value={new_job.eligibleBranches ? new_job.eligibleBranches.split(',').map(s=>s.trim()) : []} onChange={e => setNewJob({ ...new_job, eligibleBranches: Array.from(e.target.selectedOptions, opt => opt.value).join(', ') })}>
+                                                        <option value="B.Tech (Computer Science)">B.Tech (Computer Science)</option>
+                                                        <option value="B.Tech (Information Technology)">B.Tech (Information Technology)</option>
+                                                        <option value="B.E. (Computer Science)">B.E. (Computer Science)</option>
+                                                        <option value="B.E. (Information Technology)">B.E. (Information Technology)</option>
+                                                        <option value="BCA">BCA</option>
+                                                        <option value="MCA">MCA</option>
+                                                        <option value="B.Sc (Computer Science)">B.Sc (Computer Science)</option>
+                                                        <option value="B.Sc (IT)">B.Sc (IT)</option>
+                                                        <option value="M.Sc (IT)">M.Sc (IT)</option>
+                                                        <option value="Diploma (Computer Engineering)">Diploma (Computer Engineering)</option>
+                                                        <option value="Diploma (IT)">Diploma (IT)</option>
+                                                    </select>
+                                                    <small style={{ fontSize: 11, color: 'var(--text-muted)' }}>Hold Ctrl/Cmd to select multiple</small>
                                                 </div>
                                             </div>
                                             <div className="form-group">
@@ -552,7 +679,7 @@ const CompanyDashboard = () => {
                         )}
 
                         {/* ── JOB LISTINGS ── */}
-                        {activeNav === 'listings' && user.isVerified && (
+                        {activeNav === 'listings' && profile.status === 'Approved' && (
                             <>
                                 <div className="page-header page-header-row">
                                     <div><h1>Job Listings</h1><p>Manage your job postings and applicants</p></div>
@@ -560,11 +687,11 @@ const CompanyDashboard = () => {
                                 </div>
                                 <div className="table-card">
                                     <table className="data-table">
-                                         <thead><tr><th>Job Title</th><th>Package</th><th>CGPA</th><th>Limit</th><th>Applicants</th><th>Status</th><th>Actions</th></tr></thead>
+                                        <thead><tr><th>Job Title</th><th>Package</th><th>CGPA</th><th>Limit</th><th>Applicants</th><th>Status</th><th>Actions</th></tr></thead>
                                         <tbody>
                                             {jobs.map(j => (
                                                 <tr key={j._id}>
-                                                     <td className="cell-primary">{j.title}</td>
+                                                    <td className="cell-primary">{j.title}</td>
                                                     <td>{j.package ? `${j.package} LPA` : '—'}</td>
                                                     <td>{j.criteria?.minCGPA || '—'}</td>
                                                     <td>{j.requiredStudents}</td>
@@ -591,23 +718,23 @@ const CompanyDashboard = () => {
                         )}
 
                         {/* ── ALL APPLICANTS MANAGEMENT ── */}
-                        {activeNav === 'all-applicants' && user.isVerified && (
+                        {activeNav === 'all-applicants' && profile.status === 'Approved' && (
                             <>
                                 <div className="page-header page-header-row">
                                     <div><h1>Applicant Management</h1><p>Manage applications across all your jobs</p></div>
                                     <div style={{ display: 'flex', gap: 12 }}>
                                         <div className="search-bar" style={{ display: 'flex', alignItems: 'center', background: 'white', padding: '6px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', gap: 8 }}>
                                             <Search size={16} color="var(--text-muted)" />
-                                            <input 
-                                                type="text" 
-                                                placeholder="Search by name or skills..." 
+                                            <input
+                                                type="text"
+                                                placeholder="Search by name or skills..."
                                                 style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, width: 180 }}
                                                 value={applicantSearchTerm}
                                                 onChange={e => setApplicantSearchTerm(e.target.value)}
                                             />
                                         </div>
-                                        <select 
-                                            className="form-select" 
+                                        <select
+                                            className="form-select"
                                             style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
                                             value={applicantJobFilter}
                                             onChange={e => setApplicantJobFilter(e.target.value)}
@@ -617,8 +744,8 @@ const CompanyDashboard = () => {
                                                 <option key={j._id} value={j._id}>{j.title}</option>
                                             ))}
                                         </select>
-                                        <select 
-                                            className="form-select" 
+                                        <select
+                                            className="form-select"
                                             style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
                                             value={applicantStatusFilter}
                                             onChange={e => setApplicantStatusFilter(e.target.value)}
@@ -638,7 +765,7 @@ const CompanyDashboard = () => {
                                                     <td className="cell-primary">
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                                <div 
+                                                                <div
                                                                     style={{ color: 'var(--primary)', cursor: 'pointer' }}
                                                                     onClick={() => setSelectedStudent(app.student)}
                                                                 >
@@ -684,7 +811,7 @@ const CompanyDashboard = () => {
                         )}
 
                         {/* ── APPLICANTS ── */}
-                        {activeNav === 'applicants' && user.isVerified && (
+                        {activeNav === 'applicants' && profile.status === 'Approved' && (
                             <>
                                 <div className="page-header page-header-row">
                                     <div><h1>Candidate Applications</h1><p>{applicants.length} student{applicants.length !== 1 ? 's' : ''} applied</p></div>

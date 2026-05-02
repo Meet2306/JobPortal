@@ -798,8 +798,7 @@ function RegisterPanel({ step, dir, data, onChange, setData, onNext, onPrev, onS
             ) : (
               <>
                 <FloatInput label="Company Name" value={data.companyName} onChange={onChange('companyName')} required prefix={<Building2 size={15} />} />
-                <FloatSelect label="Industry Sector" value={data.industry} onChange={onChange('industry')} required
-                  options={['Technology', 'Finance & Banking', 'Healthcare', 'Education', 'Manufacturing', 'Consulting', 'E-Commerce', 'Other']} />
+                <FloatInput label="Industry Sector" value={data.industry} onChange={onChange('industry')} required placeholder="e.g. Technology" />
                 <FloatInput label="Company Website (optional)" type="url" value={data.websiteUrl} onChange={onChange('websiteUrl')} prefix={<Globe size={15} />} />
               </>
             )}

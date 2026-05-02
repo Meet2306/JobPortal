@@ -30,8 +30,8 @@ const Register = () => {
             const res = await api.get('/auth/captcha');
             setCaptchaSvg(res.data);
             setFormData(prev => ({ ...prev, captcha: '' }));
-            setError(''); 
-        } catch (err) { 
+            setError('');
+        } catch (err) {
             console.error('Captcha fetch error:', err);
             setError('Could not connect to security service. Please refresh.');
         } finally {
@@ -171,14 +171,10 @@ const Register = () => {
                             <div className="grid-2" style={{ gap: '16px' }}>
                                 <div className="form-group">
                                     <label className="form-label">Industry</label>
-                                    <select name="industry" className="form-select" value={formData.industry} onChange={handleChange} required>
-                                        <option value="">Select industry...</option>
-                                        <option value="Technology">Technology</option>
-                                        <option value="Finance">Finance & Banking</option>
-                                        <option value="Healthcare">Healthcare</option>
-                                        <option value="Education">Education</option>
-                                        <option value="Manufacturing">Manufacturing</option>
-                                    </select>
+                                    <div className="input-with-icon">
+                                        <input type="text" name="industry" required className="form-control" placeholder="e.g. Technology" value={formData.industry} onChange={handleChange} />
+                                        <Building2 size={17} className="input-icon" />
+                                    </div>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Website</label>
@@ -195,10 +191,10 @@ const Register = () => {
                     <div className="divider"><span>Security Check</span></div>
                     <div style={{ marginBottom: '24px' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
-                            <div 
+                            <div
                                 onClick={!captchaLoading ? refreshCaptcha : undefined}
-                                style={{ 
-                                    background: 'white', border: '1px solid var(--border)', 
+                                style={{
+                                    background: 'white', border: '1px solid var(--border)',
                                     borderRadius: '12px', cursor: 'pointer', display: 'flex',
                                     padding: '4px 12px', alignItems: 'center', justifyContent: 'center',
                                     minWidth: '140px', position: 'relative', overflow: 'hidden'

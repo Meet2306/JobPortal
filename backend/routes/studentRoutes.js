@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/auth');
-const { roleMiddleware, verifiedMiddleware } = require('../middlewares/role');
-const { getProfile, updateProfile, getEligibleJobs, applyForJob, getApplications, requestEditPermission, uploadPhoto, uploadResume } = require('../controllers/studentController');
+const { roleMiddleware } = require('../middlewares/role');
+const { requireApprovedProfile } = require('../middlewares/profileCheck');
+const { getProfile, updateProfile, getEligibleJobs, applyForJob, getApplications, requestEditPermission, uploadPhoto, uploadResume, submitProfileForApproval } = require('../controllers/studentController');
 const { createInterview, submitAnswer, getInterviews, getInterviewById } = require('../controllers/mockInterviewController');
 const multer = require('multer');
 const path = require('path');
@@ -30,8 +31,9 @@ router.put('/profile', updateProfile);
 router.post('/request-edit', requestEditPermission);
 router.post('/upload-photo', upload.single('photo'), uploadPhoto);
 router.post('/upload-resume', upload.single('resume'), uploadResume);
+router.post('/submit-profile', submitProfileForApproval);
 
-router.use(verifiedMiddleware); // Verify lock
+router.use(requireApprovedProfile); // Verify profile status is Approved
 
 router.get('/jobs/eligible', getEligibleJobs);
 router.post('/jobs/:jobId/apply', applyForJob);

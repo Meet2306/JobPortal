@@ -43,7 +43,7 @@ const NAV = [
 const AdminDashboard = () => {
     const { logout } = useContext(AuthContext);
     const [activeNav, setActiveNav] = useState('overview');
-    const [unverifiedUsers, setUnverifiedUsers] = useState([]);
+    const [pendingProfiles, setPendingProfiles] = useState([]);
     const [pendingJobs, setPendingJobs] = useState([]);
     const [editRequests, setEditRequests] = useState([]);
     const [analytics, setAnalytics] = useState(null);
@@ -103,9 +103,11 @@ const AdminDashboard = () => {
     const fetchPending = async () => {
         try {
             const r = await api.get('/admin/pending');
-            setUnverifiedUsers(r.data.unverifiedUsers);
-            setPendingJobs(r.data.pendingJobs);
-            setEditRequests(r.data.editRequests);
+            const students = (r.data.pendingStudents || []).map(s => ({ ...s, roleType: 'student' }));
+            const companies = (r.data.pendingCompanies || []).map(c => ({ ...c, roleType: 'company' }));
+            setPendingProfiles([...students, ...companies]);
+            setPendingJobs(r.data.pendingJobs || []);
+            setEditRequests(r.data.editRequests || []);
         } catch (e) {
             console.error('Fetch Pending Error:', e);
         }
@@ -115,14 +117,23 @@ const AdminDashboard = () => {
         try { const r = await api.get('/admin/analytics'); setAnalytics(r.data); } catch (e) { }
     };
 
-    const verifyUser = async (id) => {
-        if (!window.confirm('Approve this user?')) return;
-        try { await api.patch(`/admin/users/${id}/verify`); setSelectedUser(null); fetchPending(); } catch (e) { alert('Failed'); }
+    const approveProfile = async (id, roleType) => {
+        if (!window.confirm('Approve this profile?')) return;
+        try { 
+            await api.patch(`/admin/profiles/${roleType}/${id}/approve`); 
+            setSelectedUser(null); 
+            fetchPending(); 
+        } catch (e) { alert('Failed to approve'); }
     };
 
-    const rejectUser = async (id) => {
-        if (!window.confirm('Reject and delete this user?')) return;
-        try { await api.delete(`/admin/users/${id}/reject`); setSelectedUser(null); fetchPending(); } catch (e) { alert('Failed'); }
+    const rejectProfile = async (id, roleType) => {
+        const reason = prompt('Reason for rejection:');
+        if (!reason) return;
+        try { 
+            await api.patch(`/admin/profiles/${roleType}/${id}/reject`, { reason }); 
+            setSelectedUser(null); 
+            fetchPending(); 
+        } catch (e) { alert('Failed to reject'); }
     };
 
     const handleJobAction = async (jobId, status) => {
@@ -159,12 +170,12 @@ const AdminDashboard = () => {
         try { await api.patch(`/admin/profiles/${profileId}/edit-permission`, { action, role }); fetchPending(); } catch (e) { alert('Failed'); }
     };
 
-    const totalPending = unverifiedUsers.length + pendingJobs.length + editRequests.length;
+    const totalPending = pendingProfiles.length + pendingJobs.length + editRequests.length;
 
     /* Pie data: user types */
     const userTypePie = [
-        { name: 'Students', value: unverifiedUsers.filter(u => u.role === 'student').length },
-        { name: 'Companies', value: unverifiedUsers.filter(u => u.role === 'company').length },
+        { name: 'Students', value: pendingProfiles.filter(u => u.roleType === 'student').length },
+        { name: 'Companies', value: pendingProfiles.filter(u => u.roleType === 'company').length },
     ].filter(d => d.value > 0);
 
     const companyHiringBar = analytics?.companyHiringData?.slice(0, 8).map(c => ({
@@ -205,7 +216,7 @@ const AdminDashboard = () => {
                     <span className="sidebar-section-label">Management</span>
                     {NAV.map(item => {
                         const Icon = item.icon;
-                        const count = item.key === 'users' ? unverifiedUsers.length : item.key === 'jobs' ? pendingJobs.length : item.key === 'edits' ? editRequests.length : 0;
+                        const count = item.key === 'users' ? pendingProfiles.length : item.key === 'jobs' ? pendingJobs.length : item.key === 'edits' ? editRequests.length : 0;
                         return (
                             <button key={item.key} className={`sidebar-link ${activeNav === item.key ? 'active' : ''}`} onClick={() => setActiveNav(item.key)}>
                                 <Icon size={17} />
@@ -281,7 +292,7 @@ const AdminDashboard = () => {
 
                                 <div className="stat-grid stagger" style={{ marginBottom: 24 }}>
                                     {[
-                                        { label: 'Users Pending', value: unverifiedUsers.length, icon: Users, color: 'var(--primary)', soft: 'var(--primary-soft)' },
+                                        { label: 'Users Pending', value: pendingProfiles.length, icon: Users, color: 'var(--primary)', soft: 'var(--primary-soft)' },
                                         { label: 'Jobs Pending', value: pendingJobs.length, icon: Briefcase, color: 'var(--warning)', soft: 'var(--warning-soft)' },
                                         { label: 'Edit Requests', value: editRequests.length, icon: FileCheck, color: 'var(--purple)', soft: 'var(--purple-soft)' },
                                         { label: 'Total Selected', value: analytics?.totalSelected || 0, icon: Award, color: 'var(--success)', soft: 'var(--success-soft)' },
@@ -336,7 +347,7 @@ const AdminDashboard = () => {
                                     <div className="chart-card">
                                         <div className="card-title" style={{ marginBottom: 16 }}>Quick Actions</div>
                                         {[
-                                            { label: 'Review User Verifications', count: unverifiedUsers.length, nav: 'users', color: 'var(--primary)' },
+                                            { label: 'Review User Verifications', count: pendingProfiles.length, nav: 'users', color: 'var(--primary)' },
                                             { label: 'Review Job Postings', count: pendingJobs.length, nav: 'jobs', color: 'var(--warning)' },
                                             { label: 'Review Edit Requests', count: editRequests.length, nav: 'edits', color: 'var(--purple)' },
                                             { label: 'View Placement Analytics', count: null, nav: 'analytics', color: 'var(--success)' },
@@ -356,7 +367,7 @@ const AdminDashboard = () => {
                                 </div>
 
                                 {/* Recent pending users */}
-                                {unverifiedUsers.length > 0 && (
+                                {pendingProfiles.length > 0 && (
                                     <div className="table-card">
                                         <div className="table-header">
                                             <div className="table-title">Pending User Verifications</div>
@@ -365,16 +376,16 @@ const AdminDashboard = () => {
                                         <table className="data-table">
                                             <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Action</th></tr></thead>
                                             <tbody>
-                                                {unverifiedUsers.slice(0, 5).map(u => (
+                                                {pendingProfiles.slice(0, 5).map(u => (
                                                     <tr key={u._id}>
-                                                        <td className="cell-primary">{u.role === 'student' ? u.details?.name : u.details?.companyName || 'N/A'}</td>
-                                                        <td><span className={`badge ${u.role === 'student' ? 'badge-blue' : 'badge-purple'}`}>{u.role === 'student' ? 'Student' : 'Company'}</span></td>
-                                                        <td>{u.email}</td>
+                                                        <td className="cell-primary">{u.roleType === 'student' ? u.name : u.companyName || 'N/A'}</td>
+                                                        <td><span className={`badge ${u.roleType === 'student' ? 'badge-blue' : 'badge-purple'}`}>{u.roleType === 'student' ? 'Student' : 'Company'}</span></td>
+                                                        <td>{u.user?.email || 'N/A'}</td>
                                                         <td>
                                                             <div style={{ display: 'flex', gap: 8 }}>
                                                                 <button onClick={() => setSelectedUser(u)} className="btn btn-outline btn-sm">View</button>
-                                                                <button onClick={() => verifyUser(u._id)} className="btn btn-success btn-sm">Approve</button>
-                                                                <button onClick={() => rejectUser(u._id)} className="btn btn-danger btn-sm">Reject</button>
+                                                                <button onClick={() => approveProfile(u._id, u.roleType)} className="btn btn-success btn-sm">Approve</button>
+                                                                <button onClick={() => rejectProfile(u._id, u.roleType)} className="btn btn-danger btn-sm">Reject</button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -522,29 +533,29 @@ const AdminDashboard = () => {
                             <>
                                 <div className="page-header page-header-row">
                                     <div><h1>User Verifications</h1><p>Approve or reject user registration requests</p></div>
-                                    <span className="badge badge-warning">{unverifiedUsers.length} Pending</span>
+                                    <span className="badge badge-warning">{pendingProfiles.length} Pending</span>
                                 </div>
                                 <div className="table-card">
                                     <div className="table-header"><div className="table-title">Pending Users</div></div>
                                     <table className="data-table">
                                         <thead><tr><th>Name / Company</th><th>Role</th><th>Email</th><th>Contact</th><th>Actions</th></tr></thead>
                                         <tbody>
-                                            {unverifiedUsers.map(u => (
+                                            {pendingProfiles.map(u => (
                                                 <tr key={u._id}>
-                                                    <td className="cell-primary">{u.role === 'student' ? u.details?.name : u.details?.companyName || 'N/A'}</td>
-                                                    <td><span className={`badge ${u.role === 'student' ? 'badge-blue' : 'badge-purple'}`}><span className="badge-dot"></span>{u.role === 'student' ? 'Student' : 'Company'}</span></td>
-                                                    <td>{u.email}</td>
-                                                    <td>{u.role === 'student' ? u.details?.contactNumber : u.details?.hrContactNumber || '—'}</td>
+                                                    <td className="cell-primary">{u.roleType === 'student' ? u.name : u.companyName || 'N/A'}</td>
+                                                    <td><span className={`badge ${u.roleType === 'student' ? 'badge-blue' : 'badge-purple'}`}><span className="badge-dot"></span>{u.roleType === 'student' ? 'Student' : 'Company'}</span></td>
+                                                    <td>{u.user?.email || 'N/A'}</td>
+                                                    <td>{u.roleType === 'student' ? u.contactNumber : u.hrContactNumber || '—'}</td>
                                                     <td>
                                                         <div style={{ display: 'flex', gap: 8 }}>
                                                             <button onClick={() => setSelectedUser(u)} className="btn btn-outline btn-sm">Details</button>
-                                                            <button onClick={() => verifyUser(u._id)} className="btn btn-success btn-sm">Approve</button>
-                                                            <button onClick={() => rejectUser(u._id)} className="btn btn-danger btn-sm">Reject</button>
+                                                            <button onClick={() => approveProfile(u._id, u.roleType)} className="btn btn-success btn-sm">Approve</button>
+                                                            <button onClick={() => rejectProfile(u._id, u.roleType)} className="btn btn-danger btn-sm">Reject</button>
                                                         </div>
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {unverifiedUsers.length === 0 && (
+                                            {pendingProfiles.length === 0 && (
                                                 <tr><td colSpan={5}><div className="empty-state"><div className="empty-state-icon" style={{ margin: '0 auto 12px' }}><CheckCircle size={24} /></div><h3>All clear!</h3><p>No pending user verifications</p></div></td></tr>
                                             )}
                                         </tbody>
@@ -1042,38 +1053,141 @@ const AdminDashboard = () => {
 
                         <div style={{ background: 'var(--bg)', borderRadius: 'var(--r-lg)', padding: 20, marginBottom: 24 }}>
                             <div className="grid-2" style={{ gap: 16 }}>
-                                {selectedUser.role === 'student' ? (
+                                {selectedUser.roleType === 'student' ? (
                                     <>
                                         <div>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Name</div>
-                                            <div style={{ fontWeight: 600 }}>{selectedUser.details?.name || '—'}</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.name || '—'}</div>
                                         </div>
                                         <div>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Phone</div>
-                                            <div style={{ fontWeight: 600 }}>{selectedUser.details?.contactNumber || '—'}</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.contactNumber || '—'}</div>
                                         </div>
                                         <div>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Email</div>
-                                            <div style={{ fontWeight: 600 }}>{selectedUser.email}</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.user?.email || selectedUser.emailAddress || '—'}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Gender</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.gender || '—'}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Date of Birth</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.dateOfBirth ? new Date(selectedUser.dateOfBirth).toLocaleDateString() : '—'}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>LinkedIn</div>
+                                            <div style={{ fontWeight: 600 }}>
+                                                {selectedUser.linkedinUrl ? <a href={selectedUser.linkedinUrl} target="_blank" rel="noreferrer" style={{color: 'var(--primary)'}}>View Profile</a> : '—'}
+                                            </div>
+                                        </div>
+                                        <div style={{ gridColumn: 'span 2' }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Address</div>
+                                            <div style={{ fontWeight: 600 }}>
+                                                {selectedUser.address ? `${selectedUser.address.city || ''}, ${selectedUser.address.state || ''}, ${selectedUser.address.country || ''}`.replace(/(^[,\s]+)|([,\s]+$)/g, '') : '—'}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Education */}
+                                        <div style={{ gridColumn: 'span 2', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                                            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Education Details</div>
+                                            <div className="grid-2" style={{ gap: 12 }}>
+                                                <div>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Degree & Branch</div>
+                                                    <div style={{ fontWeight: 600 }}>{selectedUser.education?.degree ? `${selectedUser.education.degree} in ${selectedUser.education.branch}` : '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>College</div>
+                                                    <div style={{ fontWeight: 600 }}>{selectedUser.education?.collegeName || '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Timeline & Status</div>
+                                                    <div style={{ fontWeight: 600 }}>
+                                                        {selectedUser.education?.startYear ? `${selectedUser.education.startYear} - ${selectedUser.education.endYear || 'Present'} (${selectedUser.education.status || 'Pursuing'})` : '—'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Academic Scores</div>
+                                                    <div style={{ fontWeight: 600, fontSize: 13 }}>
+                                                        CGPA: {selectedUser.education?.cgpa || '—'} • 12th: {selectedUser.education?.twelfthPercentage ? `${selectedUser.education.twelfthPercentage}%` : '—'} • 10th: {selectedUser.education?.tenthPercentage ? `${selectedUser.education.tenthPercentage}%` : '—'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Skills */}
+                                        <div style={{ gridColumn: 'span 2', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                                            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Skills & Tools</div>
+                                            <div className="grid-2" style={{ gap: 12 }}>
+                                                <div>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Technical</div>
+                                                    <div style={{ fontWeight: 600 }}>{selectedUser.skills?.technical?.join(', ') || '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Tools</div>
+                                                    <div style={{ fontWeight: 600 }}>{selectedUser.skills?.tools?.join(', ') || '—'}</div>
+                                                </div>
+                                                <div style={{ gridColumn: 'span 2' }}>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Soft Skills</div>
+                                                    <div style={{ fontWeight: 600 }}>{selectedUser.skills?.soft?.join(', ') || '—'}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style={{ gridColumn: 'span 2' }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Documents</div>
+                                            {selectedUser.resumeUrl ? (
+                                                <a href={selectedUser.resumeUrl} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">View Resume</a>
+                                            ) : <span style={{ color: 'var(--text-muted)' }}>No resume uploaded</span>}
                                         </div>
                                     </>
                                 ) : (
                                     <>
                                         <div style={{ gridColumn: 'span 2' }}>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Company</div>
-                                            <div style={{ fontWeight: 700, fontSize: 16 }}>{selectedUser.details?.companyName || '—'}</div>
+                                            <div style={{ fontWeight: 700, fontSize: 16 }}>{selectedUser.companyName || '—'}</div>
                                         </div>
                                         <div>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Industry</div>
-                                            <div style={{ fontWeight: 600 }}>{selectedUser.details?.industry || '—'}</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.industry || '—'}</div>
                                         </div>
                                         <div>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>HR Contact</div>
-                                            <div style={{ fontWeight: 600 }}>{selectedUser.details?.hrContactName || '—'}</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.hrContactName || '—'}</div>
                                         </div>
                                         <div style={{ gridColumn: 'span 2' }}>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Email</div>
-                                            <div style={{ fontWeight: 600 }}>{selectedUser.email}</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.user?.email}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Phone</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.phoneNumber || '—'}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Website</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.websiteUrl || '—'}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>GST Number</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.gstNumber || '—'}</div>
+                                        </div>
+                                        <div style={{ gridColumn: 'span 2' }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Address</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.address || '—'}</div>
+                                        </div>
+                                        <div style={{ gridColumn: 'span 2' }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Description</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.description || '—'}</div>
+                                        </div>
+                                        <div style={{ gridColumn: 'span 2' }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Documents</div>
+                                            <div style={{ display: 'flex', gap: 12 }}>
+                                                {selectedUser.registrationDocument ? (
+                                                    <a href={selectedUser.registrationDocument} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">View Registration</a>
+                                                ) : <span style={{ color: 'var(--text-muted)' }}>No registration uploaded</span>}
+                                                {selectedUser.companyLogo && (
+                                                    <a href={selectedUser.companyLogo} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">View Logo</a>
+                                                )}
+                                            </div>
                                         </div>
                                     </>
                                 )}
@@ -1082,8 +1196,8 @@ const AdminDashboard = () => {
 
                         <div style={{ display: 'flex', gap: 12 }}>
                             <button onClick={() => setSelectedUser(null)} className="btn btn-outline" style={{ flex: 1 }}>Cancel</button>
-                            <button onClick={() => rejectUser(selectedUser._id)} className="btn btn-danger" style={{ flex: 1 }}>Reject</button>
-                            <button onClick={() => verifyUser(selectedUser._id)} className="btn btn-success" style={{ flex: 1 }}>Approve</button>
+                            <button onClick={() => rejectProfile(selectedUser._id, selectedUser.roleType)} className="btn btn-danger" style={{ flex: 1 }}>Reject</button>
+                            <button onClick={() => approveProfile(selectedUser._id, selectedUser.roleType)} className="btn btn-success" style={{ flex: 1 }}>Approve</button>
                         </div>
                     </div>
                 </div>

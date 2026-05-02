@@ -24,11 +24,20 @@ exports.updateProfile = async (req, res) => {
         
         Object.assign(profile, req.body);
         
-        profile.isLocked = true;
+        // Calculate isProfileComplete
+        let isComplete = true;
+        if (!profile.companyName || !profile.phoneNumber || !profile.address || 
+            !profile.industry || !profile.description || !profile.websiteUrl || !profile.gstNumber) {
+            isComplete = false;
+        }
+        if (profile.isRegistered && (!profile.registrationDocument || !profile.companyLogo)) {
+            isComplete = false;
+        }
+        profile.isProfileComplete = isComplete;
         profile.editRequestStatus = 'None';
         
         await profile.save();
-        res.json({ message: 'Profile updated successfully and locked.', profile });
+        res.json({ message: 'Profile updated successfully.', profile });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -209,5 +218,48 @@ exports.updateApplicationStatus = async (req, res) => {
         res.json({ message: 'Status updated', application });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.submitProfileForApproval = async (req, res) => {
+    try {
+        const profile = await CompanyProfile.findOne({ user: req.user.id });
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+        
+        // Backend validation removed as per user request. 
+        // Relying entirely on frontend dashboard checks.
+        
+        profile.status = 'Pending';
+        profile.editRequestStatus = 'None';
+        profile.isProfileComplete = true;
+        profile.isLocked = true;
+        await profile.save();
+        res.json({ message: 'Profile submitted for admin approval successfully' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error submitting profile' });
+    }
+};
+
+exports.uploadLogo = async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        const profile = await CompanyProfile.findOne({ user: req.user.id });
+        profile.companyLogo = `http://localhost:5000/uploads/${req.file.filename}`;
+        await profile.save();
+        res.json({ message: 'Logo uploaded!', url: profile.companyLogo });
+    } catch (err) {
+        res.status(500).json({ error: 'Upload failed' });
+    }
+};
+
+exports.uploadRegistrationDocument = async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        const profile = await CompanyProfile.findOne({ user: req.user.id });
+        profile.registrationDocument = `http://localhost:5000/uploads/${req.file.filename}`;
+        await profile.save();
+        res.json({ message: 'Registration document uploaded!', url: profile.registrationDocument });
+    } catch (err) {
+        res.status(500).json({ error: 'Upload failed' });
     }
 };

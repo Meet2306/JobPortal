@@ -8,10 +8,18 @@ const companyProfileSchema = new mongoose.Schema({
     hrContactName: { type: String },
     hrContactEmail: { type: String },
     hrContactNumber: { type: String },
+    phoneNumber: { type: String },
+    address: { type: String },
     description: { type: String },
-    isApproved: { type: Boolean, default: false }, // Admin approval
+    gstNumber: { type: String },
+    isRegistered: { type: Boolean, default: false },
+    registrationDocument: { type: String },
+    companyLogo: { type: String },
+    status: { type: String, enum: ['Draft', 'Pending', 'Approved', 'Rejected'], default: 'Draft' },
+    rejectionReason: { type: String },
     isLocked: { type: Boolean, default: false },
-    editRequestStatus: { type: String, enum: ['None', 'Pending', 'Approved'], default: 'None' }
+    editRequestStatus: { type: String, enum: ['None', 'Pending', 'Approved'], default: 'None' },
+    isProfileComplete: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('CompanyProfile', companyProfileSchema);

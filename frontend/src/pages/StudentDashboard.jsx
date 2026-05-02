@@ -61,7 +61,7 @@ const StudentDashboard = () => {
         resumeUrl: '', activeBacklogs: 0,
         address: { city: '', state: '', country: 'India' }, 
         linkedinUrl: '',
-        isLocked: false, editRequestStatus: 'None'
+        isLocked: false, editRequestStatus: 'None', status: '', rejectionReason: ''
     });
     const [jobs, setJobs] = useState([]);
     const [applications, setApplications] = useState([]);
@@ -74,8 +74,11 @@ const StudentDashboard = () => {
 
     useEffect(() => {
         fetchProfile();
-        if (user.isVerified) { fetchJobs(); fetchApplications(); }
-    }, [user.isVerified]);
+    }, []);
+
+    useEffect(() => {
+        if (profile.status === 'Approved') { fetchJobs(); fetchApplications(); }
+    }, [profile.status]);
 
     const fetchProfile = async () => {
         try {
@@ -87,6 +90,10 @@ const StudentDashboard = () => {
                     education: { ...prev.education, ...(res.data.education || {}) },
                     skills: { ...prev.skills, ...(res.data.skills || {}) }
                 }));
+                if (!res.data.isProfileComplete && res.data.status !== 'Approved') {
+                    setActiveNav('profile');
+                    setMsg({ type: 'warning', text: 'First Complete profile' });
+                }
             }
         } catch (e) {}
     };
@@ -152,10 +159,67 @@ const StudentDashboard = () => {
 
         try {
             await api.put('/student/profile', profile);
-            setMsg({ type: 'success', text: 'Profile updated successfully!' });
+            setMsg({ type: 'success', text: 'Profile saved successfully!' });
             setTimeout(() => setMsg({ type: '', text: '' }), 3000);
             fetchProfile();
         } catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Update failed' }); }
+    };
+
+    const handleSubmitForApproval = async () => {
+        // Validation checks
+        const reqBasic = ['name', 'contactNumber', 'gender', 'dateOfBirth', 'linkedinUrl'];
+        for (let f of reqBasic) {
+            if (!profile[f]) {
+                setProfileStep(1);
+                setMsg({ type: 'error', text: `Personal Details: Please fill out your ${f.replace(/([A-Z])/g, ' $1').toLowerCase()}` });
+                return;
+            }
+        }
+        if (profile.contactNumber && !/^[789]\d{9}$/.test(profile.contactNumber)) {
+            setProfileStep(1);
+            setMsg({ type: 'error', text: 'Personal Details: Contact number must be exactly 10 digits and start with 7, 8, or 9' });
+            return;
+        }
+        if (!profile.address?.city || !profile.address?.state) {
+            setProfileStep(1);
+            setMsg({ type: 'error', text: 'Personal Details: Please provide your city and state' });
+            return;
+        }
+        const reqEdu = ['collegeName', 'degree', 'branch', 'cgpa', 'startYear', 'endYear', 'tenthPercentage', 'twelfthPercentage'];
+        for (let f of reqEdu) {
+            if (!profile.education?.[f] && profile.education?.[f] !== 0) {
+                setProfileStep(2);
+                setMsg({ type: 'error', text: `Education: Please fill out your ${f.replace(/([A-Z])/g, ' $1').toLowerCase()}` });
+                return;
+            }
+        }
+        if (!profile.skills?.technical?.length) {
+            setProfileStep(3);
+            setMsg({ type: 'error', text: 'Skills: Please list at least one technical skill' });
+            return;
+        }
+        if (!profile.skills?.soft?.length) {
+            setProfileStep(3);
+            setMsg({ type: 'error', text: 'Skills: Please list at least one soft skill' });
+            return;
+        }
+        if (!profile.resumeUrl) {
+            setProfileStep(3);
+            setMsg({ type: 'error', text: 'Skills: Please provide a valid Resume URL or upload a file' });
+            return;
+        }
+        if (profile.resumeUrl && profile.resumeUrl.trim().startsWith('file:///')) {
+            setProfileStep(3);
+            setMsg({ type: 'error', text: 'Local files (file:///) cannot be used. Please upload your resume online.' });
+            return;
+        }
+
+        try {
+            await api.put('/student/profile', profile); // Auto-save first
+            await api.post('/student/submit-profile');
+            setMsg({ type: 'success', text: 'your profile request sent to admin approval' });
+            fetchProfile();
+        } catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Submission failed' }); }
     };
 
     const handleApply = async (jobId) => {
@@ -224,7 +288,7 @@ const StudentDashboard = () => {
 
                     {NAV.map(item => {
                         const Icon = item.icon;
-                        const disabled = !user.isVerified && (item.key === 'jobs' || item.key === 'applications' || item.key === 'mock-interview');
+                        const disabled = profile.status !== 'Approved' && (item.key === 'jobs' || item.key === 'applications' || item.key === 'mock-interview');
                         return (
                             <button
                                 key={item.key}
@@ -277,8 +341,8 @@ const StudentDashboard = () => {
                     </div>
 
                     <div className="navbar-right">
-                        <div className={`navbar-status badge ${user.isVerified ? 'badge-success' : 'badge-warning'}`}>
-                            {user.isVerified ? 'Verified' : 'Pending'}
+                        <div className={`navbar-status badge ${profile.status === 'Approved' ? 'badge-success' : profile.status === 'Rejected' ? 'badge-danger' : 'badge-warning'}`}>
+                            {profile.status || 'Draft'}
                         </div>
                         <button className="navbar-icon-btn"><Bell size={16} /></button>
                         <div className="navbar-profile">
@@ -292,15 +356,15 @@ const StudentDashboard = () => {
                 </nav>
 
                 <div className="page-content">
-                    {!user.isVerified && (activeNav === 'jobs' || activeNav === 'applications' || activeNav === 'mock-interview') ? (
+                    {profile.status !== 'Approved' && (activeNav === 'jobs' || activeNav === 'applications' || activeNav === 'mock-interview') ? (
                         <div className="animate-scale-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
                             <div className="card" style={{ maxWidth: 420, textAlign: 'center', padding: '48px 40px' }}>
                                 <div style={{ width: 60, height: 60, background: 'var(--warning-soft)', borderRadius: 'var(--r-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
                                     <AlertCircle size={30} color="var(--warning)" />
                                 </div>
-                                <h2 style={{ fontSize: 18, marginBottom: 10 }}>Account Pending</h2>
-                                <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.7, marginBottom: 24 }}>Account is awaiting verification. Please complete your profile.</p>
-                                <button className="btn btn-primary btn-full" onClick={() => setActiveNav('profile')}>Complete Profile →</button>
+                                <h2 style={{ fontSize: 18, marginBottom: 10 }}>Account Pending Approval</h2>
+                                <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.7, marginBottom: 24 }}>Your account needs admin approval before accessing core features. Please complete and submit your profile.</p>
+                                <button className="btn btn-primary btn-full" onClick={() => setActiveNav('profile')}>Go to Profile →</button>
                             </div>
                         </div>
                     ) : (
@@ -527,6 +591,17 @@ const StudentDashboard = () => {
                                             {profile.editRequestStatus === 'None' && <button onClick={requestEditPermission} className="btn btn-sm" style={{ background: '#FAAD14', color: 'white', border: 'none', padding: '4px 10px', height: 'auto' }}>Request Edit</button>}
                                         </div>
                                     )}
+                                    {profile.status === 'Rejected' && (
+                                        <div className="alert alert-danger" style={{ marginBottom: 20 }}>
+                                            <strong>Profile Rejected:</strong> {profile.rejectionReason}
+                                            <br/>Please make the necessary changes and submit again.
+                                        </div>
+                                    )}
+                                    {profile.status === 'Pending' && (
+                                        <div className="alert alert-warning" style={{ marginBottom: 20 }}>
+                                            Your profile is currently pending admin approval. You cannot make edits at this time.
+                                        </div>
+                                    )}
                                     {msg.text && <div className={`alert alert-${msg.type}`}><AlertCircle size={16} />{msg.text}</div>}
                                     <div className="card">
                                         {/* Simplified Step UI */}
@@ -556,8 +631,8 @@ const StudentDashboard = () => {
                                             {profileStep === 2 && (
                                                  <div className="grid-2" style={{ gap: 16 }}>
                                                      <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">College Name</label><input className="form-control" value={profile.education?.collegeName} onChange={e => setProfile({...profile, education: {...profile.education, collegeName: e.target.value}})} disabled={isLocked} /></div>
-                                                     <div className="form-group"><label className="form-label">Degree</label><input className="form-control" value={profile.education?.degree} onChange={e => setProfile({...profile, education: {...profile.education, degree: e.target.value}})} disabled={isLocked} /></div>
-                                                     <div className="form-group"><label className="form-label">Branch</label><input className="form-control" value={profile.education?.branch} onChange={e => setProfile({...profile, education: {...profile.education, branch: e.target.value}})} disabled={isLocked} /></div>
+                                                     <div className="form-group"><label className="form-label">Degree</label><select className="form-control" value={profile.education?.degree} onChange={e => setProfile({...profile, education: {...profile.education, degree: e.target.value, branch: e.target.value}})} disabled={isLocked}><option value="">Select...</option><option value="B.Tech (Computer Science)">B.Tech (Computer Science)</option><option value="B.Tech (Information Technology)">B.Tech (Information Technology)</option><option value="B.E. (Computer Science)">B.E. (Computer Science)</option><option value="B.E. (Information Technology)">B.E. (Information Technology)</option><option value="BCA">BCA</option><option value="MCA">MCA</option><option value="B.Sc (Computer Science)">B.Sc (Computer Science)</option><option value="B.Sc (IT)">B.Sc (IT)</option><option value="M.Sc (IT)">M.Sc (IT)</option><option value="Diploma (Computer Engineering)">Diploma (Computer Engineering)</option><option value="Diploma (IT)">Diploma (IT)</option></select></div>
+
                                                      <div className="form-group">
                                                         <label className="form-label">Education Status</label>
                                                         <select className="form-control" value={profile.education?.status} onChange={e => setProfile({...profile, education: {...profile.education, status: e.target.value}})} disabled={isLocked}>
@@ -611,7 +686,12 @@ const StudentDashboard = () => {
                                             )}
                                             <div style={{ marginTop: 30, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                                                 {profileStep > 1 && <button type="button" onClick={() => setProfileStep(s => s-1)} className="btn btn-outline">Back</button>}
-                                                {profileStep < 3 ? <button type="button" onClick={() => setProfileStep(s => s+1)} className="btn btn-primary">Next</button> : <button type="submit" className="btn btn-primary" disabled={isLocked}>Save Profile</button>}
+                                                {profileStep < 3 ? <button type="button" onClick={() => setProfileStep(s => s+1)} className="btn btn-primary">Next</button> : 
+                                                    <>
+                                                        <button type="submit" className="btn btn-outline" disabled={isLocked || profile.status === 'Pending'}>Save Draft</button>
+                                                        <button type="button" onClick={handleSubmitForApproval} className="btn btn-primary" disabled={isLocked || profile.status === 'Pending'}>Submit for Approval</button>
+                                                    </>
+                                                }
                                             </div>
                                         </form>
                                     </div>

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const studentProfileSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    
+
     // 1. Basic Information
     name: { type: String, required: true },
     profilePhoto: { type: String },
@@ -43,8 +43,11 @@ const studentProfileSchema = new mongoose.Schema({
     passingYear: { type: Number }, // Keep for compatibility
     activeBacklogs: { type: Number, default: 0 },
     resumeUrl: { type: String },
+    status: { type: String, enum: ['Draft', 'Pending', 'Approved', 'Rejected'], default: 'Draft' },
+    rejectionReason: { type: String },
     isLocked: { type: Boolean, default: false },
-    editRequestStatus: { type: String, enum: ['None', 'Pending', 'Approved'], default: 'None' }
+    editRequestStatus: { type: String, enum: ['None', 'Pending', 'Approved'], default: 'None' },
+    isProfileComplete: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('StudentProfile', studentProfileSchema);

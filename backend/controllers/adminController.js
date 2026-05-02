@@ -8,21 +8,8 @@ const { updateJobStatus } = require('../utils/jobStatusHelper');
 
 exports.getPendingApprovals = async (req, res) => {
     try {
-        const unverifiedUsers = await User.find({ isVerified: false, role: { $ne: 'admin' } }).lean();
-        
-        const userIds = unverifiedUsers.map(u => u._id);
-        
-        const students = await StudentProfile.find({ user: { $in: userIds } }).lean();
-        const companies = await CompanyProfile.find({ user: { $in: userIds } }).lean();
-
-        const usersWithDetails = unverifiedUsers.map(user => {
-            if (user.role === 'student') {
-                user.details = students.find(s => s.user.toString() === user._id.toString()) || null;
-            } else if (user.role === 'company') {
-                user.details = companies.find(c => c.user.toString() === user._id.toString()) || null;
-            }
-            return user;
-        });
+        const pendingStudents = await StudentProfile.find({ status: 'Pending' }).populate('user', 'email').lean();
+        const pendingCompanies = await CompanyProfile.find({ status: 'Pending' }).populate('user', 'email').lean();
 
         const pendingJobs = await Job.find({ status: 'Pending Approval' }).populate({
             path: 'company',
@@ -37,10 +24,86 @@ exports.getPendingApprovals = async (req, res) => {
             ...companyEditRequests.map(r => ({ ...r, role: 'company' }))
         ];
 
-        res.json({ unverifiedUsers: usersWithDetails, pendingJobs, editRequests });
+        res.json({ pendingStudents, pendingCompanies, pendingJobs, editRequests });
     } catch (err) {
         console.error('Fetch Pending Error:', err);
         res.status(500).json({ error: 'Server error fetching approvals', details: err.message });
+    }
+};
+
+exports.approveStudentProfile = async (req, res) => {
+    try {
+        const profile = await StudentProfile.findById(req.params.id).populate('user');
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+        
+        profile.status = 'Approved';
+        profile.isLocked = true;
+        await profile.save();
+        
+        if (profile.user) {
+            await User.findByIdAndUpdate(profile.user._id, { isVerified: true });
+        }
+        
+        await sendEmail(profile.user.email, 'Profile Approved', 'Your student profile has been approved by the admin. You can now apply to jobs.');
+        res.json({ message: 'Student profile approved' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.rejectStudentProfile = async (req, res) => {
+    try {
+        const { reason } = req.body;
+        const profile = await StudentProfile.findById(req.params.id).populate('user');
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+        
+        profile.status = 'Rejected';
+        profile.rejectionReason = reason;
+        profile.isLocked = false;
+        await profile.save();
+        
+        await sendEmail(profile.user.email, 'Profile Rejected', `Your student profile was rejected by the admin. Reason: ${reason}`);
+        res.json({ message: 'Student profile rejected' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.approveCompanyProfile = async (req, res) => {
+    try {
+        const profile = await CompanyProfile.findById(req.params.id).populate('user');
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+        
+        profile.status = 'Approved';
+        profile.isLocked = true;
+        await profile.save();
+        
+        if (profile.user) {
+            await User.findByIdAndUpdate(profile.user._id, { isVerified: true });
+        }
+        
+        await sendEmail(profile.user.email, 'Company Profile Approved', 'Your company profile has been approved by the admin. You can now post jobs.');
+        res.json({ message: 'Company profile approved' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+exports.rejectCompanyProfile = async (req, res) => {
+    try {
+        const { reason } = req.body;
+        const profile = await CompanyProfile.findById(req.params.id).populate('user');
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+        
+        profile.status = 'Rejected';
+        profile.rejectionReason = reason;
+        profile.isLocked = false;
+        await profile.save();
+        
+        await sendEmail(profile.user.email, 'Company Profile Rejected', `Your company profile was rejected by the admin. Reason: ${reason}`);
+        res.json({ message: 'Company profile rejected' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
     }
 };
 
