@@ -150,6 +150,11 @@ const CompanyDashboard = () => {
             return;
         }
 
+        if (profile.isRegistered && !profile.registrationDocument) {
+            setMsg({ type: 'error', text: 'Please provide a drive link for your Registration Document.' });
+            return;
+        }
+
         try { await api.put('/company/profile', profile); setMsg({ type: 'success', text: 'Profile saved!' }); fetchProfile(); }
         catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Update failed' }); }
     };
@@ -179,7 +184,7 @@ const CompanyDashboard = () => {
         }
 
         if (profile.isRegistered && !profile.registrationDocument) {
-            setMsg({ type: 'error', text: 'Please upload your Registration Document since your company is registered.' });
+            setMsg({ type: 'error', text: 'Please provide a drive link for your Registration Document.' });
             return;
         }
 
@@ -544,10 +549,18 @@ const CompanyDashboard = () => {
                                                 </div>
                                                 {profile.isRegistered && (
                                                     <div className="form-group">
-                                                        <label className="form-label">Registration Certificate (PDF/Image)</label>
+                                                        <label className="form-label">Registration Certificate (Drive Link) <span style={{ color: 'var(--danger)' }}>*</span></label>
                                                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                                            {profile.registrationDocument && <a href={profile.registrationDocument} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">View Current</a>}
-                                                            <input type="file" className="form-control" onChange={e => handleFileUpload(e, 'registration')} disabled={isLocked} accept=".pdf,.png,.jpg,.jpeg" style={{ padding: '8px' }} />
+                                                            <input 
+                                                                type="url" 
+                                                                className="form-control" 
+                                                                value={profile.registrationDocument || ''} 
+                                                                onChange={e => setProfile({ ...profile, registrationDocument: e.target.value })} 
+                                                                disabled={isLocked} 
+                                                                placeholder="https://drive.google.com/..." 
+                                                                required={profile.isRegistered}
+                                                            />
+                                                            {profile.registrationDocument && <a href={profile.registrationDocument} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">Test Link</a>}
                                                         </div>
                                                     </div>
                                                 )}

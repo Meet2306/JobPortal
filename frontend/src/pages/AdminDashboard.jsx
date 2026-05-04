@@ -60,6 +60,7 @@ const AdminDashboard = () => {
     const [allUsers, setAllUsers] = useState([]);
     const [userSearchTerm, setUserSearchTerm] = useState('');
     const [userFilterStatus, setUserFilterStatus] = useState('All');
+    const [userFilterRole, setUserFilterRole] = useState('All');
 
     const [allApplications, setAllApplications] = useState([]);
     const [appSearchTerm, setAppSearchTerm] = useState('');
@@ -187,7 +188,8 @@ const AdminDashboard = () => {
     const filteredUsers = allUsers.filter(u => {
         const matchesSearch = u.fullName.toLowerCase().includes(userSearchTerm.toLowerCase()) || u.email.toLowerCase().includes(userSearchTerm.toLowerCase());
         const matchesStatus = userFilterStatus === 'All' || u.approvalStatus === userFilterStatus;
-        return matchesSearch && matchesStatus;
+        const matchesRole = userFilterRole === 'All' || u.role === userFilterRole;
+        return matchesSearch && matchesStatus && matchesRole;
     });
 
     const filteredApplications = allApplications.filter(app => {
@@ -423,18 +425,42 @@ const AdminDashboard = () => {
                                             <option value="Approved">Approved</option>
                                             <option value="Pending">Pending</option>
                                         </select>
+                                        <select
+                                            className="auth-input-field"
+                                            style={{ height: 'auto', padding: '6px 12px', width: 'auto' }}
+                                            value={userFilterRole}
+                                            onChange={e => setUserFilterRole(e.target.value)}
+                                        >
+                                            <option value="All">All Roles</option>
+                                            <option value="student">Student</option>
+                                            <option value="company">Company</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div className="table-card">
                                     <div className="table-header"><div className="table-title">Registered Users ({filteredUsers.length})</div></div>
                                     <table className="data-table">
-                                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Profile</th><th>Status</th></tr></thead>
+                                        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Document</th><th>Profile</th><th>Status</th></tr></thead>
                                         <tbody>
                                             {filteredUsers.map(u => (
                                                 <tr key={u._id}>
                                                     <td className="cell-primary">{u.fullName}</td>
                                                     <td>{u.email}</td>
                                                     <td><span className={`badge ${u.role === 'student' ? 'badge-blue' : 'badge-purple'}`}><span className="badge-dot"></span>{u.role === 'student' ? 'Student' : 'Company'}</span></td>
+                                                    <td>
+                                                        {u.documentUrl ? (
+                                                            <a 
+                                                                href={u.documentUrl.startsWith('http') ? u.documentUrl : `http://localhost:5000${u.documentUrl}`} 
+                                                                target="_blank" 
+                                                                rel="noreferrer" 
+                                                                style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}
+                                                            >
+                                                                <FileCheck size={14} /> {u.role === 'student' ? 'View CV' : 'View Reg. Doc'}
+                                                            </a>
+                                                        ) : (
+                                                            <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>No Document</span>
+                                                        )}
+                                                    </td>
                                                     <td>
                                                         <span className={`badge ${u.profileCompletionStatus === 'Complete' ? 'badge-success' : 'badge-warning'}`}>
                                                             {u.profileCompletionStatus}
@@ -448,7 +474,7 @@ const AdminDashboard = () => {
                                                 </tr>
                                             ))}
                                             {filteredUsers.length === 0 && (
-                                                <tr><td colSpan={5}><div className="empty-state"><div className="empty-state-icon" style={{ margin: '0 auto 12px' }}><Users size={24} /></div><h3>No users found</h3><p>Try adjusting your search or filter</p></div></td></tr>
+                                                <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-icon" style={{ margin: '0 auto 12px' }}><Users size={24} /></div><h3>No users found</h3><p>Try adjusting your search or filter</p></div></td></tr>
                                             )}
                                         </tbody>
                                     </table>

@@ -274,7 +274,8 @@ exports.getAllUsers = async (req, res) => {
                 email: u.email,
                 role: u.role,
                 profileCompletionStatus: profileCompletionStatus,
-                approvalStatus: u.isVerified ? 'Approved' : 'Pending'
+                approvalStatus: u.isVerified ? 'Approved' : 'Pending',
+                documentUrl: profile ? (u.role === 'student' ? profile.resumeUrl : profile.registrationDocument) : null
             };
         });
         
