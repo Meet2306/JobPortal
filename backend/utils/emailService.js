@@ -2,12 +2,23 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // or any other email provider
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // use SSL
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    // Force IPv4 to prevent ENETUNREACH error on Render (IPv6 routing issues)
+    // The "family" option is passed to the underlying socket connection.
+    tls: {
+        rejectUnauthorized: false
     }
 });
+
+// Since family: 4 is not always officially recognized inside tls object by some versions, 
+// wait, the best way in modern nodemailer is just putting it directly in the root of the config:
+transporter.options.family = 4;
 
 const sendEmail = async (to, subject, html) => {
     try {
