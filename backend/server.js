@@ -42,7 +42,7 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
 let sessionOptions = {
     secret: process.env.SESSION_SECRET || 'placements-node-secret',
