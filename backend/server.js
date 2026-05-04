@@ -31,7 +31,8 @@ app.use(cors({
     origin: [
         "http://localhost:5173",
         "http://localhost:5174",
-        "http://localhost:5175"
+        "http://localhost:5175",
+        "https://job-portal-wpzs.vercel.app"
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
@@ -41,15 +42,17 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 let sessionOptions = {
     secret: process.env.SESSION_SECRET || 'placements-node-secret',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false, // removed production condition
+        secure: isProduction, // must be true for cross-origin in production
         httpOnly: true,
         maxAge: 3600000, // 1 hour
-        sameSite: 'lax' // lax for local
+        sameSite: isProduction ? 'none' : 'lax' // none required for cross-origin cookies
     },
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
