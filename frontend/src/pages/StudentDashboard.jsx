@@ -635,10 +635,28 @@ const StudentDashboard = () => {
 
                                                      <div className="form-group">
                                                         <label className="form-label">Education Status</label>
-                                                        <select className="form-control" value={profile.education?.status} onChange={e => setProfile({...profile, education: {...profile.education, status: e.target.value}})} disabled={isLocked}>
-                                                            <option value="Pursuing">Pursuing</option>
-                                                            <option value="Completed">Completed</option>
-                                                        </select>
+                                                        {(() => {
+                                                            const currentYear = new Date().getFullYear();
+                                                            const currentMonth = new Date().getMonth() + 1;
+                                                            const endYear = profile.education?.endYear;
+                                                            const hasPassed = endYear && (endYear < currentYear || (endYear === currentYear && currentMonth > 6));
+                                                            const autoStatus = hasPassed ? 'Completed' : 'Pursuing';
+                                                            return (
+                                                                <>
+                                                                    <div style={{ 
+                                                                        fontWeight: 700, 
+                                                                        fontSize: 14, 
+                                                                        padding: '10px 0',
+                                                                        color: autoStatus === 'Completed' ? '#059669' : '#2563EB' 
+                                                                    }}>
+                                                                        {autoStatus}
+                                                                    </div>
+                                                                    <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: -4 }}>
+                                                                        (Auto-computed based on Passing Year)
+                                                                    </p>
+                                                                </>
+                                                            );
+                                                        })()}
                                                      </div>
                                                      <div className="form-group"><label className="form-label">CGPA</label><input className="form-control" type="number" step="0.01" value={profile.education?.cgpa} onChange={e => setProfile({...profile, education: {...profile.education, cgpa: parseFloat(e.target.value)}})} disabled={isLocked} /></div>
                                                      <div className="form-group"><label className="form-label">Start Year</label><input className="form-control" type="number" placeholder="2023" value={profile.education?.startYear} onChange={e => setProfile({...profile, education: {...profile.education, startYear: parseInt(e.target.value)}})} disabled={isLocked} /></div>

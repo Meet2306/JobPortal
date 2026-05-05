@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
+import AdminLoginPage from './pages/AdminLoginPage';
 import StudentDashboard from './pages/StudentDashboard';
 import CompanyDashboard from './pages/CompanyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -25,6 +26,7 @@ const PrivateRoute = ({ children, role }) => {
     </div>
   );
   if (!user) return <Navigate to="/login" />;
+
   if (role && user.role !== role) {
     if (user.role === 'student') return <Navigate to="/student" />;
     if (user.role === 'company') return <Navigate to="/company" />;
@@ -41,6 +43,7 @@ const App = () => {
           <Route path="/"          element={<Navigate to="/about" />} />
           <Route path="/login"     element={<AuthPage initialMode="login" />} />
           <Route path="/register"  element={<AuthPage initialMode="register" />} />
+          <Route path="/admin"     element={<AdminLoginPage />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify-email/:token"   element={<VerifyEmail />} />
           <Route path="/about"     element={<AboutPage />} />

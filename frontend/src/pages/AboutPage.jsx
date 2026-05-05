@@ -323,6 +323,16 @@ const AboutPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer style={{ padding: '40px 20px', textAlign: 'center', borderTop: '1px solid rgba(0,0,0,0.05)', background: '#f1f5f9' }}>
+        <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 12px' }}>&copy; 2026 Campus Placement Portal. All rights reserved.</p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 24 }}>
+          <button onClick={() => navigate('/admin')} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>Admin Portal</button>
+          <span style={{ color: '#cbd5e1' }}>|</span>
+          <button style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Support</button>
+        </div>
+      </footer>
     </div>
   );
 };

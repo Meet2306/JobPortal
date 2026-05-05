@@ -27,13 +27,24 @@ app.use(helmet({
     crossOriginResourcePolicy: false // FIX: allow cross-origin requests
 }));
 // Middleware
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "https://job-portal-wpzs.vercel.app",
+    process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        "https://job-portal-wpzs.vercel.app"
-    ],
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(o => origin.startsWith(o))) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"]

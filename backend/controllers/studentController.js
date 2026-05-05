@@ -6,8 +6,23 @@ const { sendEmail } = require('../utils/emailService');
 exports.getProfile = async (req, res) => {
     try {
         const profile = await StudentProfile.findOne({ user: req.user.id }).populate('user', 'email');
-        if (profile && !profile.emailAddress && profile.user) {
-            profile.emailAddress = profile.user.email;
+        if (profile) {
+            if (!profile.emailAddress && profile.user) {
+                profile.emailAddress = profile.user.email;
+            }
+
+            // Auto-compute/correct education status
+            if (profile.education && profile.education.endYear) {
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth() + 1;
+                const hasPassed = profile.education.endYear < currentYear || (profile.education.endYear === currentYear && currentMonth > 6);
+                const computedStatus = hasPassed ? 'Completed' : 'Pursuing';
+
+                if (profile.education.status !== computedStatus) {
+                    profile.education.status = computedStatus;
+                    await profile.save(); // Silent update
+                }
+            }
         }
         res.json(profile);
     } catch (err) {
@@ -43,11 +58,21 @@ exports.updateProfile = async (req, res) => {
 
         // 2. Education
         if (education) {
-            profile.education = { ...profile.education, ...education };
+            // Ignore status from frontend, auto-compute it
+            const { status, ...eduData } = education; 
+            profile.education = { ...profile.education, ...eduData };
+            
+            if (profile.education.endYear) {
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth() + 1;
+                const hasPassed = profile.education.endYear < currentYear || (profile.education.endYear === currentYear && currentMonth > 6);
+                profile.education.status = hasPassed ? 'Completed' : 'Pursuing';
+            }
+
             // Sync legacy fields
             profile.cgpa = education.cgpa !== undefined ? education.cgpa : profile.cgpa;
             profile.branch = education.branch || profile.branch;
-            profile.passingYear = education.endYear || profile.passingYear;
+            profile.passingYear = profile.education.endYear || profile.passingYear;
         }
 
         // 3. Skills

@@ -381,6 +381,11 @@ export default function AuthPage({ initialMode }) {
     setLoginLoading(true); setLoginError('');
     try {
       const data = await login(loginData);
+      if (data.role === 'admin') {
+        // If an admin tries to log in here, redirect them to the dedicated admin portal
+        navigate('/admin');
+        return;
+      }
       navigate(`/${data.role}`);
     } catch (err) {
       const msg = err.response?.data?.error || '';
@@ -571,7 +576,10 @@ export default function AuthPage({ initialMode }) {
                       className="text-indigo-600 font-bold hover:underline transition-all">
                       Sign in
                     </button></>}
-                <div className="mt-3">
+                <div className="mt-4 flex flex-col gap-2">
+                  <button onClick={() => navigate('/admin')} className="text-slate-400 hover:text-indigo-600 transition-colors text-[10px] font-bold uppercase tracking-widest">
+                    Admin Portal
+                  </button>
                   <button onClick={() => navigate('/about')} className="text-slate-500 hover:text-indigo-600 transition-colors text-xs font-semibold flex items-center justify-center gap-1 mx-auto">
                     How it works <ArrowRight size={12} />
                   </button>

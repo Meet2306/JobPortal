@@ -27,7 +27,7 @@ exports.updateProfile = async (req, res) => {
         // Calculate isProfileComplete
         let isComplete = true;
         if (!profile.companyName || !profile.phoneNumber || !profile.address || 
-            !profile.industry || !profile.description || !profile.websiteUrl || !profile.gstNumber) {
+            !profile.industry || !profile.description || !profile.websiteUrl) {
             isComplete = false;
         }
         if (profile.isRegistered && (!profile.registrationDocument || !profile.companyLogo)) {

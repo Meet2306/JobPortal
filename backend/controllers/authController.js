@@ -219,11 +219,37 @@ exports.logout = (req, res) => {
 };
 
 exports.me = async (req, res) => {
+    console.log('GET /api/auth/me called - Checking authentication...');
+    try {
+        // If authMiddleware didn't run or failed, req.user might be missing
+        // but we'll try to find the user if the token exists.
+        let userId = req.user?.id;
 
-    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+        if (!userId) {
+            const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+            if (token) {
+                try {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                    userId = decoded.id;
+                } catch (err) {
+                    // Invalid token, just return null user
+                    return res.status(200).json(null);
+                }
+            }
+        }
 
-    const user = await User.findById(req.user.id).select('-password');
-    res.json(user);
+        if (!userId) {
+            return res.status(200).json(null);
+        }
+
+        const user = await User.findById(userId).select('-password');
+        if (!user) return res.status(200).json(null);
+        
+        res.json(user);
+    } catch (err) {
+        console.error('Error in /me:', err);
+        res.status(200).json(null);
+    }
 };
 
 exports.forgotPassword = async (req, res) => {

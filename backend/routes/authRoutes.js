@@ -17,7 +17,7 @@ router.get('/verify-email/:token', verifyEmail);
 router.post('/register', register);
 router.post('/login', loginLimiter, login);
 router.post('/logout', logout);
-router.get('/me', authMiddleware, me);
+router.get('/me', me);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 

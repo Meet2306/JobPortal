@@ -51,7 +51,7 @@ const CompanyDashboard = () => {
     const [activeNav, setActiveNav] = useState('overview');
     const [profile, setProfile] = useState({
         companyName: '', industry: '', websiteUrl: '', hrContactName: '', hrContactEmail: '', hrContactNumber: '',
-        description: '', phoneNumber: '', address: '', gstNumber: '', isRegistered: false,
+        description: '', phoneNumber: '', address: '', isRegistered: false,
         registrationDocument: '', companyLogo: '',
         isLocked: false, editRequestStatus: 'None', status: '', rejectionReason: ''
     });
@@ -522,17 +522,11 @@ const CompanyDashboard = () => {
                                                 <textarea className="form-textarea" rows={3} value={profile.description || ''} onChange={e => setProfile({ ...profile, description: e.target.value })} disabled={isLocked} placeholder="Brief company description..." />
                                             </div>
 
-                                            <div className="grid-2" style={{ gap: 16 }}>
-                                                <div className="form-group">
-                                                    <label className="form-label">Phone Number (Company)</label>
-                                                    <div className="input-group">
-                                                        <div className="input-group-icon"><Phone size={16} /></div>
-                                                        <input className="form-control" value={profile.phoneNumber || ''} onChange={e => setProfile({ ...profile, phoneNumber: e.target.value })} disabled={isLocked} />
-                                                    </div>
-                                                </div>
-                                                <div className="form-group">
-                                                    <label className="form-label">GST / Registration Number</label>
-                                                    <input className="form-control" value={profile.gstNumber || ''} onChange={e => setProfile({ ...profile, gstNumber: e.target.value })} disabled={isLocked} />
+                                            <div className="form-group">
+                                                <label className="form-label">Phone Number (Company)</label>
+                                                <div className="input-group">
+                                                    <div className="input-group-icon"><Phone size={16} /></div>
+                                                    <input className="form-control" value={profile.phoneNumber || ''} onChange={e => setProfile({ ...profile, phoneNumber: e.target.value })} disabled={isLocked} />
                                                 </div>
                                             </div>
                                             <div className="form-group">
