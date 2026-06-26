@@ -238,8 +238,12 @@ const StudentDashboard = () => {
     };
 
     const handlePasswordReset = async () => {
-        try { await api.post('/auth/forgot-password', { email: user.email }); setPassMsg('Password reset link sent to your email!'); }
-        catch { setPassMsg('Failed to send reset link'); }
+        try {
+            await api.post('/auth/forgot-password', { email: user.email });
+            setPassMsg('Password reset link sent to your email!');
+        } catch (err) {
+            setPassMsg(err.response?.data?.error || 'Failed to send reset link');
+        }
     };
 
     /* Filtering */

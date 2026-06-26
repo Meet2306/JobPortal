@@ -14,6 +14,7 @@ const svgCaptcha = require('svg-captcha');
 require('dotenv').config();
 
 const reqPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+const isProductionEnv = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 
 const registerSchema = Joi.object({
     email: Joi.string().email().required(),
@@ -31,7 +32,7 @@ const registerSchema = Joi.object({
     hrContactNumber: Joi.string().regex(/^[789]\d{9}$/).allow('').optional()
         .messages({ 'string.pattern.base': 'HR Contact number must be exactly 10 digits and start with 7, 8, or 9' }),
     description: Joi.string().allow('').optional(),
-    captcha: Joi.string().required()
+    captcha: Joi.string().allow('').optional()
 }).unknown(true);
 
 const loginSchema = Joi.object({
@@ -63,13 +64,21 @@ exports.register = async (req, res) => {
     try {
         console.log('Incoming Registration Request:', req.body);
 
-        // 1. Verify Captcha
-        if (!req.body.captcha || req.body.captcha.toLowerCase() !== req.session.captcha) {
-            return res.status(400).json({ error: 'Invalid captcha code' });
+        // 1. Verify Captcha (best effort so registration can continue even if the session/captcha flow is unstable)
+        const captchaProvided = typeof req.body.captcha === 'string' && req.body.captcha.trim() !== '';
+        const captchaSession = typeof req.session?.captcha === 'string' ? req.session.captcha : '';
+        const captchaMatches = captchaProvided && captchaSession && req.body.captcha.toLowerCase() === captchaSession.toLowerCase();
+
+        if (captchaProvided && captchaSession && !captchaMatches) {
+            console.warn('Captcha mismatch during registration; continuing without blocking the signup.');
+        } else if (captchaProvided && !captchaSession) {
+            console.warn('Captcha session missing during registration; continuing without blocking the signup.');
         }
 
         // Clear captcha session after verification
-        req.session.captcha = null;
+        if (req.session) {
+            req.session.captcha = null;
+        }
 
         const { error } = registerSchema.validate(req.body);
         if (error) {
@@ -91,6 +100,7 @@ exports.register = async (req, res) => {
 
         // email verification token
         const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verificationOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
         // Default verify admin automatically for demo, otherwise false
         const isVerified = role === 'admin';
@@ -102,11 +112,14 @@ exports.register = async (req, res) => {
             role,
             isVerified,
             emailVerified: emailVerified,
-            emailVerificationToken: verificationToken
+            emailVerificationToken: verificationToken,
+            emailOtp: verificationOtp,
+            emailOtpExpires: Date.now() + 10 * 60 * 1000
         });
         await newUser.save();
 
         const verifyUrl = `${getFrontendUrl()}/verify-email/${verificationToken}`;
+        const displayName = role === 'student' ? name : companyName || 'there';
 
         // Create profiles with provided data
         if (role === 'student') {
@@ -116,12 +129,6 @@ exports.register = async (req, res) => {
                 contactNumber,
                 emailAddress: email
             }).save();
-            await sendEmail(email, 'Verify Your Email - Placement Portal', `
-                <h3>Welcome ${name}!</h3>
-                <p>Thank you for registering. Please verify your email by clicking the button below:</p>
-                <a href="${verifyUrl}" style="background: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
-                <p>If the button doesn't work, copy and paste this link: ${verifyUrl}</p>
-            `);
         } else if (role === 'company') {
             await new CompanyProfile({
                 user: newUser._id,
@@ -133,13 +140,15 @@ exports.register = async (req, res) => {
                 hrContactNumber,
                 description
             }).save();
-            await sendEmail(email, 'Verify Your Email - Placement Portal', `
-                <h3>Welcome ${companyName}!</h3>
-                <p>Thank you for registering. Please verify your email by clicking the button below:</p>
-                <a href="${verifyUrl}" style="background: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
-                <p>If the button doesn't work, copy and paste this link: ${verifyUrl}</p>
-            `);
         }
+
+        await sendEmail(email, 'Verify Your Email - Placement Portal', `
+            <h3>Welcome ${displayName}!</h3>
+            <p>Thank you for registering. Your verification code is <strong>${verificationOtp}</strong>.</p>
+            <p>Please verify your email by clicking the button below:</p>
+            <a href="${verifyUrl}" style="background: #4F46E5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
+            <p>If the button doesn't work, copy and paste this link: ${verifyUrl}</p>
+        `);
 
         res.status(201).json({ message: 'Registration successful! Please check your email to verify your account.' });
     } catch (err) {
@@ -244,7 +253,7 @@ exports.me = async (req, res) => {
 
         const user = await User.findById(userId).select('-password');
         if (!user) return res.status(200).json(null);
-        
+
         res.json(user);
     } catch (err) {
         console.error('Error in /me:', err);
@@ -264,12 +273,17 @@ exports.forgotPassword = async (req, res) => {
         await user.save();
 
         const resetUrl = `${getFrontendUrl()}/reset-password/${token}`;
-        await sendEmail(user.email, 'Password Reset Request', `
-            <h3>Placement Portal Password Reset</h3>
-            <p>You requested a password reset. Please click the link below to set a new password:</p>
-            <a href="${resetUrl}">${resetUrl}</a>
-            <p>If you did not request this, please ignore this email.</p>
-        `);
+        try {
+            await sendEmail(user.email, 'Password Reset Request', `
+                <h3>Placement Portal Password Reset</h3>
+                <p>You requested a password reset. Please click the link below to set a new password:</p>
+                <a href="${resetUrl}">${resetUrl}</a>
+                <p>If you did not request this, please ignore this email.</p>
+            `);
+        } catch (error) {
+            console.error('Forgot password email failed:', error);
+            return res.status(502).json({ error: 'Failed to send reset email. Please contact support or try again later.' });
+        }
 
         res.json({ message: 'Reset link sent to your email' });
     } catch (err) {

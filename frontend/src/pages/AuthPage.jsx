@@ -425,9 +425,10 @@ export default function AuthPage({ initialMode }) {
 
   const nextStep = () => {
     setRegError('');
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (step === 2) {
       if (!regData.email.includes('@')) return setRegError('Please enter a valid email address.');
-      if (regData.password.length < 8) return setRegError('Password must be at least 8 characters.');
+      if (!passwordRegex.test(regData.password)) return setRegError('Password must be at least 8 chars, contain upper, lower, digit, and special char.');
       if (regData.password !== regData.confirmPassword) return setRegError('Passwords do not match.');
     }
     if (step === 3) {
@@ -449,6 +450,9 @@ export default function AuthPage({ initialMode }) {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(regData.password)) return setRegError('Password must be at least 8 chars, contain upper, lower, digit, and special char.');
+    if (regData.password !== regData.confirmPassword) return setRegError('Passwords do not match.');
     if (!regData.captcha) return setRegError('Please enter the captcha code.');
     setRegLoading(true); setRegError('');
     try {
