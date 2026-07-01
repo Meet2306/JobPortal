@@ -53,10 +53,17 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
+if (!process.env.MONGODB_URI) {
+    throw new Error('Missing MONGODB_URI environment variable');
+}
+if (!process.env.SESSION_SECRET) {
+    throw new Error('Missing SESSION_SECRET environment variable');
+}
 
 let sessionOptions = {
-    secret: process.env.SESSION_SECRET || 'placements-node-secret',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
