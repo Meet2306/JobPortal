@@ -100,12 +100,17 @@ const connectDB = async () => {
     console.log("MongoDB connected");
 };
 
-connectDB().then(() => {
+const startServer = async () => {
+    await connectDB();
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
-}).catch(err => {
-    console.error("Failed to connect to MongoDB", err);
-});
+};
+
+if (require.main === module) {
+    startServer().catch(err => {
+        console.error("Failed to connect to MongoDB", err);
+    });
+}
 
 module.exports = app;
