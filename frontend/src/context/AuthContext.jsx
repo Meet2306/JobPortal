@@ -9,7 +9,12 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchUser = async () => {
+        const initializeAuth = async () => {
+            // If token stored from previous session, set Authorization header
+            const token = localStorage.getItem('token');
+            if (token) {
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            }
             try {
                 const res = await api.get('/auth/me');
                 setUser(res.data);
@@ -19,7 +24,7 @@ export const AuthProvider = ({ children }) => {
                 setLoading(false);
             }
         };
-        fetchUser();
+        initializeAuth();
     }, []);
 
     const login = async (credentials) => {
@@ -27,19 +32,29 @@ export const AuthProvider = ({ children }) => {
         // Set minimal user state synchronously to avoid navigation race
         // (login response includes role + isVerified)
         try {
-            flushSync(() => setUser(res.data));
-        } catch (e) {
-            // flushSync may not be available in some environments; fallback
-            setUser(res.data);
-        }
-        // Refresh full user profile in background
-        try {
-            const userRes = await api.get('/auth/me');
-            setUser(userRes.data);
+            const token = res.data.token;
+            if (token) {
+                // persist token so subsequent requests include it
+                localStorage.setItem('token', token);
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            }
+            // Set minimal user state synchronously to avoid navigation race
+            try {
+                flushSync(() => setUser(res.data));
+            } catch (e) {
+                setUser(res.data);
+            }
+            // Refresh full user profile in background
+            try {
+                const userRes = await api.get('/auth/me');
+                setUser(userRes.data);
+            } catch (err) {
+                // ignore
+            }
+            return res.data;
         } catch (err) {
-            // ignore - keep minimal state so UI can proceed
+            throw err;
         }
-        return res.data;
     };
 
     const register = async (data) => {
@@ -48,7 +63,13 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
-        await api.post('/auth/logout');
+        try {
+            await api.post('/auth/logout');
+        } catch (err) {
+            // ignore network errors
+        }
+        localStorage.removeItem('token');
+        delete api.defaults.headers.common['Authorization'];
         setUser(null);
     };
 

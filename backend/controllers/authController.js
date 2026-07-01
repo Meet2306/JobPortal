@@ -211,7 +211,8 @@ exports.login = async (req, res) => {
             maxAge: 24 * 60 * 60 * 1000
         });
 
-        res.json({ message: 'Logged in successfully', role: user.role, isVerified: user.isVerified });
+        // Return token in response for SPA clients to use Authorization header if needed
+        res.json({ message: 'Logged in successfully', role: user.role, isVerified: user.isVerified, token });
     } catch (err) {
         res.status(500).json({ error: 'Internal Server Error' });
     }
