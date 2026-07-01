@@ -38,7 +38,7 @@ const allowedOrigins = [
     vercelOrigin
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
@@ -54,22 +54,9 @@ app.use(cors({
     exposedHeaders: ["Set-Cookie"],
     preflightContinue: false,
     optionsSuccessStatus: 204
-}));
-app.options('*', cors({
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(o => origin && origin.startsWith(o))) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-}));
+};
+app.use(cors(corsOptions));
+app.options('/*', cors(corsOptions));
 app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
