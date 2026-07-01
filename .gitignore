@@ -26,3 +26,10 @@ build/
 *.njsproj
 *.sln
 *.sw?
+
+# Environment Variables
+.env
+.env.production
+.env.local
+.env.development
+*.env
