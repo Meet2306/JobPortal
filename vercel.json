@@ -8,8 +8,7 @@
         "frontend": {
             "root": "frontend",
             "framework": "vite",
-            "buildCommand": "npm run vercel-build",
-            "outputDirectory": "dist"
+            "buildCommand": "npm run vercel-build"
         },
         "backend": {
             "root": "backend",
