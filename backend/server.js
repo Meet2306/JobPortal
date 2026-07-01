@@ -85,11 +85,11 @@ let sessionOptions = {
 app.use(session(sessionOptions));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/student', studentRoutes);
-app.use('/api/company', companyRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/ats', atsRoutes);
+app.use('/auth', authRoutes);
+app.use('/student', studentRoutes);
+app.use('/company', companyRoutes);
+app.use('/admin', adminRoutes);
+app.use('/ats', atsRoutes);
 
 //// DB & Server startup
 // const PORT = process.env.PORT || 5000;
