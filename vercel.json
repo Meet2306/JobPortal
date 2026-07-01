@@ -13,7 +13,8 @@
         },
         "backend": {
             "root": "backend",
-            "entrypoint": "server.js"
+            "entrypoint": "server.js",
+            "mount": "/api"
         }
     },
     "rewrites": [
