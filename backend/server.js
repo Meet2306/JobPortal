@@ -23,6 +23,7 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
 app.use('/uploads', express.static(uploadsDir));
+app.use('/api/uploads', express.static(uploadsDir));
 app.use(helmet({
     crossOriginResourcePolicy: false // FIX: allow cross-origin requests
 }));
@@ -101,11 +102,11 @@ let sessionOptions = {
 app.use(session(sessionOptions));
 
 // Routes
-app.use('/auth', authRoutes);
-app.use('/student', studentRoutes);
-app.use('/company', companyRoutes);
-app.use('/admin', adminRoutes);
-app.use('/ats', atsRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/student', studentRoutes);
+app.use('/api/company', companyRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/ats', atsRoutes);
 
 //// DB & Server startup
 // const PORT = process.env.PORT || 5000;
