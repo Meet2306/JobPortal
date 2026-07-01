@@ -4,6 +4,18 @@
     "installCommand": "cd frontend && npm install && cd ../backend && npm install",
     "buildCommand": "cd frontend && npm run vercel-build",
     "outputDirectory": "frontend/dist",
+    "experimentalServices": {
+        "frontend": {
+            "root": "frontend",
+            "framework": "vite",
+            "buildCommand": "npm run vercel-build",
+            "outputDirectory": "dist"
+        },
+        "backend": {
+            "root": "backend",
+            "entrypoint": "server.js"
+        }
+    },
     "rewrites": [
         {
             "source": "/api/(.*)",
