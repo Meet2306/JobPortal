@@ -17,6 +17,14 @@ const atsRoutes = require('./routes/atsRoutes');
 
 const app = express();
 
+// Global error handlers to avoid process crash on unhandled rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
 // Ensure uploads/ directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -117,12 +125,27 @@ const connectDB = async () => {
         return;
     }
 
-    await mongoose.connect(process.env.MONGODB_URI);
+    try {
+        // Only pass supported options. Avoid legacy `useNewUrlParser`/`useUnifiedTopology`.
+        await mongoose.connect(process.env.MONGODB_URI, {
+            serverSelectionTimeoutMS: 30000
+        });
 
-    isConnected = true;
-
-    console.log("✅ MongoDB Connected");
+        isConnected = true;
+        console.log("✅ MongoDB Connected");
+    } catch (err) {
+        console.error('MongoDB Connection Error:', err && err.message ? err.message : err);
+        // Do not throw here to avoid crashing the serverless function on transient network issues.
+        // The connection can be retried on subsequent function invocations.
+    }
 };
+
+mongoose.connection.on('error', (err) => {
+    console.error('Mongoose connection error:', err && err.message ? err.message : err);
+});
+mongoose.connection.on('disconnected', () => {
+    console.warn('Mongoose disconnected');
+});
 // const startServer = async () => {
 //     await connectDB();
 //     app.listen(PORT, () => {
@@ -135,7 +158,8 @@ const connectDB = async () => {
 //         console.error("Failed to connect to MongoDB", err);
 //     });
 // }
-if (!process.env.VERCEL) {
+// Start server only when run directly. When required (for Vercel serverless), do not listen.
+if (require.main === module) {
     connectDB()
         .then(() => {
             app.listen(PORT, () => {
@@ -145,9 +169,8 @@ if (!process.env.VERCEL) {
         .catch((err) => {
             console.error("MongoDB Connection Error:", err);
         });
-}
-
-if (process.env.VERCEL) {
+} else {
+    // When imported (serverless), attempt to connect but do not start HTTP server
     connectDB().catch((err) => {
         console.error("MongoDB Connection Error:", err);
     });
