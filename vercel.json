@@ -8,7 +8,8 @@
         "frontend": {
             "root": "frontend",
             "framework": "vite",
-            "buildCommand": "npm run vercel-build"
+            "buildCommand": "npm run vercel-build",
+            "mount": "/"
         },
         "backend": {
             "root": "backend",
