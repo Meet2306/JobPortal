@@ -450,7 +450,7 @@ const AdminDashboard = () => {
                                                     <td>
                                                         {u.documentUrl ? (
                                                             <a 
-                                                                href={u.documentUrl.startsWith('http') ? u.documentUrl : `http://localhost:5000${u.documentUrl}`} 
+                                                                href={u.documentUrl.startsWith('http') ? u.documentUrl : (import.meta.env.PROD ? u.documentUrl : `http://localhost:5000${u.documentUrl}`)} 
                                                                 target="_blank" 
                                                                 rel="noreferrer" 
                                                                 style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}
