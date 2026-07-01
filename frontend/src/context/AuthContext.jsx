@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import api from '../utils/api';
 
 export const AuthContext = createContext();
@@ -23,9 +24,21 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (credentials) => {
         const res = await api.post('/auth/login', credentials);
-        // After login, fetch user details
-        const userRes = await api.get('/auth/me');
-        setUser(userRes.data);
+        // Set minimal user state synchronously to avoid navigation race
+        // (login response includes role + isVerified)
+        try {
+            flushSync(() => setUser(res.data));
+        } catch (e) {
+            // flushSync may not be available in some environments; fallback
+            setUser(res.data);
+        }
+        // Refresh full user profile in background
+        try {
+            const userRes = await api.get('/auth/me');
+            setUser(userRes.data);
+        } catch (err) {
+            // ignore - keep minimal state so UI can proceed
+        }
         return res.data;
     };
 
