@@ -27,19 +27,21 @@ app.use(helmet({
     crossOriginResourcePolicy: false // FIX: allow cross-origin requests
 }));
 // Middleware
+const vercelOrigin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",
-    "https://job-portal-wpzs.vercel.app",
-    process.env.FRONTEND_URL
+    "https://job-portal-frontend-ten-chi.vercel.app",
+    process.env.FRONTEND_URL,
+    vercelOrigin
 ].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(o => origin.startsWith(o))) {
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(o => origin && origin.startsWith(o))) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -47,7 +49,9 @@ app.use(cors({
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 }));
 app.set("trust proxy", 1);
 app.use(express.json());
