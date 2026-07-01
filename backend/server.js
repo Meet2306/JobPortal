@@ -87,29 +87,62 @@ app.use('/api/company', companyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ats', atsRoutes);
 
-// DB & Server startup
+//// DB & Server startup
+// const PORT = process.env.PORT || 5000;
+
+// let isConnected = false;
+
+// const connectDB = async () => {
+//     if (isConnected) return;
+
+//     const db = await mongoose.connect(process.env.MONGODB_URI);
+//     isConnected = db.connections[0].readyState;
+//     console.log("MongoDB connected");
+// };
+
+
 const PORT = process.env.PORT || 5000;
 
 let isConnected = false;
 
 const connectDB = async () => {
-    if (isConnected) return;
+    if (isConnected || mongoose.connection.readyState === 1) {
+        return;
+    }
 
-    const db = await mongoose.connect(process.env.MONGODB_URI);
-    isConnected = db.connections[0].readyState;
-    console.log("MongoDB connected");
+    await mongoose.connect(process.env.MONGODB_URI);
+
+    isConnected = true;
+
+    console.log("✅ MongoDB Connected");
 };
+// const startServer = async () => {
+//     await connectDB();
+//     app.listen(PORT, () => {
+//         console.log(`Server running on port ${PORT}`);
+//     });
+// };
 
-const startServer = async () => {
-    await connectDB();
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-};
+// if (require.main === module) {
+//     startServer().catch(err => {
+//         console.error("Failed to connect to MongoDB", err);
+//     });
+// }
+if (!process.env.VERCEL) {
+    connectDB()
+        .then(() => {
+            app.listen(PORT, () => {
+                console.log(`🚀 Server running on port ${PORT}`);
+            });
+        })
+        .catch((err) => {
+            console.error("MongoDB Connection Error:", err);
+        });
+}
 
-if (require.main === module) {
-    startServer().catch(err => {
-        console.error("Failed to connect to MongoDB", err);
+if (process.env.VERCEL) {
+    connectDB().catch((err) => {
+        console.error("MongoDB Connection Error:", err);
     });
 }
 
