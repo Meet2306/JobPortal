@@ -102,6 +102,14 @@ app.use('/api/company', companyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ats', atsRoutes);
 
+// Health check routes
+app.get('/', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Backend API running' });
+});
+app.get('/api', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Backend API running' });
+});
+
 //// DB & Server startup
 // const PORT = process.env.PORT || 5000;
 
