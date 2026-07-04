@@ -150,6 +150,11 @@ const CompanyDashboard = () => {
             return;
         }
 
+        if (profile.phoneNumber && !/^[789]\d{9}$/.test(profile.phoneNumber)) {
+            setMsg({ type: 'error', text: 'Company Phone number must be exactly 10 digits and start with 7, 8, or 9' });
+            return;
+        }
+
         if (profile.isRegistered && !profile.registrationDocument) {
             setMsg({ type: 'error', text: 'Please provide a drive link for your Registration Document.' });
             return;
@@ -180,6 +185,11 @@ const CompanyDashboard = () => {
 
         if (profile.hrContactNumber && !/^[789]\d{9}$/.test(profile.hrContactNumber)) {
             setMsg({ type: 'error', text: 'HR Phone must be exactly 10 digits and start with 7, 8, or 9' });
+            return;
+        }
+
+        if (profile.phoneNumber && !/^[789]\d{9}$/.test(profile.phoneNumber)) {
+            setMsg({ type: 'error', text: 'Company Phone number must be exactly 10 digits and start with 7, 8, or 9' });
             return;
         }
 
@@ -526,7 +536,7 @@ const CompanyDashboard = () => {
                                                 <label className="form-label">Phone Number (Company)</label>
                                                 <div className="input-group">
                                                     <div className="input-group-icon"><Phone size={16} /></div>
-                                                    <input className="form-control" value={profile.phoneNumber || ''} onChange={e => setProfile({ ...profile, phoneNumber: e.target.value })} disabled={isLocked} />
+                                                    <input className="form-control" maxLength="10" placeholder="e.g. 9876543210" value={profile.phoneNumber || ''} onChange={e => setProfile({ ...profile, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })} disabled={isLocked} />
                                                 </div>
                                             </div>
                                             <div className="form-group">
@@ -545,13 +555,13 @@ const CompanyDashboard = () => {
                                                     <div className="form-group">
                                                         <label className="form-label">Registration Certificate (Drive Link) <span style={{ color: 'var(--danger)' }}>*</span></label>
                                                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                                            <input 
-                                                                type="url" 
-                                                                className="form-control" 
-                                                                value={profile.registrationDocument || ''} 
-                                                                onChange={e => setProfile({ ...profile, registrationDocument: e.target.value })} 
-                                                                disabled={isLocked} 
-                                                                placeholder="https://drive.google.com/..." 
+                                                            <input
+                                                                type="url"
+                                                                className="form-control"
+                                                                value={profile.registrationDocument || ''}
+                                                                onChange={e => setProfile({ ...profile, registrationDocument: e.target.value })}
+                                                                disabled={isLocked}
+                                                                placeholder="https://drive.google.com/..."
                                                                 required={profile.isRegistered}
                                                             />
                                                             {profile.registrationDocument && <a href={profile.registrationDocument} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline">Test Link</a>}
@@ -638,11 +648,11 @@ const CompanyDashboard = () => {
                                                 </div>
                                                 <div className="form-group">
                                                     <label className="form-label">Eligible Branches</label>
-                                                    <select multiple className="form-control" style={{ minHeight: '120px' }} value={new_job.eligibleBranches ? new_job.eligibleBranches.split(',').map(s=>s.trim()) : []} onChange={e => setNewJob({ ...new_job, eligibleBranches: Array.from(e.target.selectedOptions, opt => opt.value).join(', ') })}>
+                                                    <select multiple className="form-control" style={{ minHeight: '120px' }} value={new_job.eligibleBranches ? new_job.eligibleBranches.split(',').map(s => s.trim()) : []} onChange={e => setNewJob({ ...new_job, eligibleBranches: Array.from(e.target.selectedOptions, opt => opt.value).join(', ') })}>
                                                         <option value="B.Tech (Computer Science)">B.Tech (Computer Science)</option>
                                                         <option value="B.Tech (Information Technology)">B.Tech (Information Technology)</option>
-                                                        <option value="B.E. (Computer Science)">B.E. (Computer Science)</option>
-                                                        <option value="B.E. (Information Technology)">B.E. (Information Technology)</option>
+                                                        {/* <option value="B.E. (Computer Science)">B.E. (Computer Science)</option>
+                                                        <option value="B.E. (Information Technology)">B.E. (Information Technology)</option> */}
                                                         <option value="BCA">BCA</option>
                                                         <option value="MCA">MCA</option>
                                                         <option value="B.Sc (Computer Science)">B.Sc (Computer Science)</option>

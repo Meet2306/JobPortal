@@ -32,7 +32,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 const NAV = [
     { key: 'overview', label: 'Overview', icon: BarChart3 },
     { key: 'all-users', label: 'User Management', icon: Users },
-    { key: 'applications', label: 'App Tracking', icon: Layers },
+    // { key: 'applications', label: 'App Tracking', icon: Layers },
     { key: 'users', label: 'User Approvals', icon: Users },
     { key: 'jobs', label: 'Job Approvals', icon: Briefcase },
     { key: 'edits', label: 'Edit Requests', icon: FileCheck },
@@ -67,9 +67,9 @@ const AdminDashboard = () => {
     const [appFilterStatus, setAppFilterStatus] = useState('All');
     const [selectedApplication, setSelectedApplication] = useState(null);
 
-    useEffect(() => { 
-        fetchPending(); 
-        fetchAnalytics(); 
+    useEffect(() => {
+        fetchPending();
+        fetchAnalytics();
         fetchAllUsers();
         fetchAllApplications();
         fetchStudents();
@@ -120,20 +120,20 @@ const AdminDashboard = () => {
 
     const approveProfile = async (id, roleType) => {
         if (!window.confirm('Approve this profile?')) return;
-        try { 
-            await api.patch(`/admin/profiles/${roleType}/${id}/approve`); 
-            setSelectedUser(null); 
-            fetchPending(); 
+        try {
+            await api.patch(`/admin/profiles/${roleType}/${id}/approve`);
+            setSelectedUser(null);
+            fetchPending();
         } catch (e) { alert('Failed to approve'); }
     };
 
     const rejectProfile = async (id, roleType) => {
         const reason = prompt('Reason for rejection:');
         if (!reason) return;
-        try { 
-            await api.patch(`/admin/profiles/${roleType}/${id}/reject`, { reason }); 
-            setSelectedUser(null); 
-            fetchPending(); 
+        try {
+            await api.patch(`/admin/profiles/${roleType}/${id}/reject`, { reason });
+            setSelectedUser(null);
+            fetchPending();
         } catch (e) { alert('Failed to reject'); }
     };
 
@@ -449,10 +449,10 @@ const AdminDashboard = () => {
                                                     <td><span className={`badge ${u.role === 'student' ? 'badge-blue' : 'badge-purple'}`}><span className="badge-dot"></span>{u.role === 'student' ? 'Student' : 'Company'}</span></td>
                                                     <td>
                                                         {u.documentUrl ? (
-                                                            <a 
-                                                                href={u.documentUrl.startsWith('http') ? u.documentUrl : `http://localhost:5000${u.documentUrl}`} 
-                                                                target="_blank" 
-                                                                rel="noreferrer" 
+                                                            <a
+                                                                href={u.documentUrl.startsWith('http') ? u.documentUrl : `http://localhost:5000${u.documentUrl}`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
                                                                 style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 500, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}
                                                             >
                                                                 <FileCheck size={14} /> {u.role === 'student' ? 'View CV' : 'View Reg. Doc'}
@@ -483,7 +483,7 @@ const AdminDashboard = () => {
                         )}
 
                         {/* ── APPLICATION TRACKING ── */}
-                        {activeNav === 'applications' && (
+                        {/* {activeNav === 'applications' && (
                             <>
                                 <div className="page-header page-header-row">
                                     <div><h1>Application Tracker</h1><p>Monitor all student job applications</p></div>
@@ -552,7 +552,7 @@ const AdminDashboard = () => {
                                     </table>
                                 </div>
                             </>
-                        )}
+                        )} */}
 
                         {/* ── USER APPROVALS ── */}
                         {activeNav === 'users' && (
@@ -1104,7 +1104,7 @@ const AdminDashboard = () => {
                                         <div>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>LinkedIn</div>
                                             <div style={{ fontWeight: 600 }}>
-                                                {selectedUser.linkedinUrl ? <a href={selectedUser.linkedinUrl} target="_blank" rel="noreferrer" style={{color: 'var(--primary)'}}>View Profile</a> : '—'}
+                                                {selectedUser.linkedinUrl ? <a href={selectedUser.linkedinUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>View Profile</a> : '—'}
                                             </div>
                                         </div>
                                         <div style={{ gridColumn: 'span 2' }}>
@@ -1113,14 +1113,14 @@ const AdminDashboard = () => {
                                                 {selectedUser.address ? `${selectedUser.address.city || ''}, ${selectedUser.address.state || ''}, ${selectedUser.address.country || ''}`.replace(/(^[,\s]+)|([,\s]+$)/g, '') : '—'}
                                             </div>
                                         </div>
-                                        
+
                                         {/* Education */}
                                         <div style={{ gridColumn: 'span 2', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
                                             <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>Education Details</div>
                                             <div className="grid-2" style={{ gap: 12 }}>
                                                 <div>
                                                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Degree & Branch</div>
-                                                    <div style={{ fontWeight: 600 }}>{selectedUser.education?.degree ? `${selectedUser.education.degree} in ${selectedUser.education.branch}` : '—'}</div>
+                                                    <div style={{ fontWeight: 600 }}>{selectedUser.education?.degree ? `${selectedUser.education.degree}` : '—'}</div>
                                                 </div>
                                                 <div>
                                                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>College</div>
@@ -1193,8 +1193,8 @@ const AdminDashboard = () => {
                                             <div style={{ fontWeight: 600 }}>{selectedUser.websiteUrl || '—'}</div>
                                         </div>
                                         <div>
-                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>GST Number</div>
-                                            <div style={{ fontWeight: 600 }}>{selectedUser.gstNumber || '—'}</div>
+                                            {/* <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>GST Number</div>
+                                            <div style={{ fontWeight: 600 }}>{selectedUser.gstNumber || '—'}</div> */}
                                         </div>
                                         <div style={{ gridColumn: 'span 2' }}>
                                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Address</div>
@@ -1306,8 +1306,8 @@ const AdminDashboard = () => {
                                         <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Current Status</div>
                                         <div>
                                             <span className={`badge ${selectedApplication.status === 'Selected' ? 'badge-success' :
-                                                    selectedApplication.status === 'Rejected' ? 'badge-danger' :
-                                                        selectedApplication.status === 'Applied' ? 'badge-blue' : 'badge-warning'
+                                                selectedApplication.status === 'Rejected' ? 'badge-danger' :
+                                                    selectedApplication.status === 'Applied' ? 'badge-blue' : 'badge-warning'
                                                 }`}>
                                                 {selectedApplication.status}
                                             </span>

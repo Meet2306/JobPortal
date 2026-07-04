@@ -52,14 +52,14 @@ const StudentDashboard = () => {
     const { user, logout } = useContext(AuthContext);
     const [profile, setProfile] = useState({
         name: '', contactNumber: '', profilePhoto: '', gender: '', dateOfBirth: '',
-        education: { 
+        education: {
             degree: '', branch: '', collegeName: '', status: 'Pursuing',
-            cgpa: 0, startYear: '', endYear: '', 
-            tenthPercentage: 0, twelfthPercentage: 0 
+            cgpa: 0, startYear: '', endYear: '',
+            tenthPercentage: 0, twelfthPercentage: 0
         },
         skills: { technical: [], soft: [], tools: [] },
         resumeUrl: '', activeBacklogs: 0,
-        address: { city: '', state: '', country: 'India' }, 
+        address: { city: '', state: '', country: 'India' },
         linkedinUrl: '',
         isLocked: false, editRequestStatus: 'None', status: '', rejectionReason: ''
     });
@@ -80,6 +80,26 @@ const StudentDashboard = () => {
         if (profile.status === 'Approved') { fetchJobs(); fetchApplications(); }
     }, [profile.status]);
 
+    const getMaxDobDate = () => {
+        const today = new Date();
+        const maxYear = today.getFullYear() - 18;
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${maxYear}-${month}-${day}`;
+    };
+
+    const validateAge18 = (dobString) => {
+        if (!dobString) return false;
+        const dobDate = new Date(dobString);
+        const today = new Date();
+        let age = today.getFullYear() - dobDate.getFullYear();
+        const m = today.getMonth() - dobDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+            age--;
+        }
+        return age >= 18;
+    };
+
     const fetchProfile = async () => {
         try {
             const res = await api.get('/student/profile');
@@ -95,11 +115,11 @@ const StudentDashboard = () => {
                     setMsg({ type: 'warning', text: 'First Complete profile' });
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
     };
 
-    const fetchJobs = async () => { try { const r = await api.get('/student/jobs/eligible'); setJobs(r.data); } catch (e) {} };
-    const fetchApplications = async () => { try { const r = await api.get('/student/applications'); setApplications(r.data); } catch (e) {} };
+    const fetchJobs = async () => { try { const r = await api.get('/student/jobs/eligible'); setJobs(r.data); } catch (e) { } };
+    const fetchApplications = async () => { try { const r = await api.get('/student/applications'); setApplications(r.data); } catch (e) { } };
 
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
@@ -117,6 +137,12 @@ const StudentDashboard = () => {
         if (profile.contactNumber && !/^[789]\d{9}$/.test(profile.contactNumber)) {
             setProfileStep(1);
             setMsg({ type: 'error', text: 'Personal Details: Contact number must be exactly 10 digits and start with 7, 8, or 9' });
+            return;
+        }
+
+        if (profile.dateOfBirth && !validateAge18(profile.dateOfBirth)) {
+            setProfileStep(1);
+            setMsg({ type: 'error', text: 'Personal Details: You must be at least 18 years old.' });
             return;
         }
 
@@ -180,6 +206,12 @@ const StudentDashboard = () => {
             setMsg({ type: 'error', text: 'Personal Details: Contact number must be exactly 10 digits and start with 7, 8, or 9' });
             return;
         }
+
+        if (profile.dateOfBirth && !validateAge18(profile.dateOfBirth)) {
+            setProfileStep(1);
+            setMsg({ type: 'error', text: 'Personal Details: You must be at least 18 years old.' });
+            return;
+        }
         if (!profile.address?.city || !profile.address?.state) {
             setProfileStep(1);
             setMsg({ type: 'error', text: 'Personal Details: Please provide your city and state' });
@@ -223,10 +255,10 @@ const StudentDashboard = () => {
     };
 
     const handleApply = async (jobId) => {
-        try { 
-            await api.post(`/student/jobs/${jobId}/apply`); 
-            setMsg({ type: 'success', text: 'Application submitted!' }); 
-            fetchApplications(); 
+        try {
+            await api.post(`/student/jobs/${jobId}/apply`);
+            setMsg({ type: 'success', text: 'Application submitted!' });
+            fetchApplications();
             fetchJobs();
         }
         catch (err) { setMsg({ type: 'error', text: err.response?.data?.error || 'Failed to apply' }); }
@@ -262,7 +294,7 @@ const StudentDashboard = () => {
             profile.education?.cgpa, profile.education?.endYear, profile.resumeUrl,
             profile.skills?.technical?.length, profile.address?.city, profile.linkedinUrl
         ];
-        fields.forEach(f => { if(f) s++; });
+        fields.forEach(f => { if (f) s++; });
         return Math.round((s / fields.length) * 100);
     })();
 
@@ -467,11 +499,11 @@ const StudentDashboard = () => {
                                         <div style={{ display: 'flex', gap: 10 }}>
                                             <div className="input-group" style={{ width: 180 }}>
                                                 <div className="input-group-icon"><MapPin size={14} /></div>
-                                                <input className="form-control" style={{ height: 36, fontSize: 12 }} placeholder="Location..." value={search.location} onChange={e => setSearch({...search, location: e.target.value})} />
+                                                <input className="form-control" style={{ height: 36, fontSize: 12 }} placeholder="Location..." value={search.location} onChange={e => setSearch({ ...search, location: e.target.value })} />
                                             </div>
                                             <div className="input-group" style={{ width: 180 }}>
                                                 <div className="input-group-icon"><Briefcase size={14} /></div>
-                                                <input className="form-control" style={{ height: 36, fontSize: 12 }} placeholder="Skills..." value={search.skill} onChange={e => setSearch({...search, skill: e.target.value})} />
+                                                <input className="form-control" style={{ height: 36, fontSize: 12 }} placeholder="Skills..." value={search.skill} onChange={e => setSearch({ ...search, skill: e.target.value })} />
                                             </div>
                                         </div>
                                     </div>
@@ -497,9 +529,9 @@ const StudentDashboard = () => {
                                                         <div style={{ marginBottom: 6 }}><strong>Skills:</strong> {job.requiredSkills?.join(', ') || '—'}</div>
                                                         <div><strong>Ends:</strong> {new Date(job.appCloseDate).toLocaleDateString()}</div>
                                                     </div>
-                                                    <button 
-                                                        className="btn btn-primary btn-full" 
-                                                        disabled={job.status !== 'Open' || hasApplied} 
+                                                    <button
+                                                        className="btn btn-primary btn-full"
+                                                        disabled={job.status !== 'Open' || hasApplied}
                                                         onClick={() => handleApply(job._id)}
                                                     >
                                                         {hasApplied ? 'Already Applied' : job.status === 'Open' ? 'Apply Now' : job.status}
@@ -557,17 +589,17 @@ const StudentDashboard = () => {
                                     </div>
                                     <div style={{ padding: '0 20px 20px', color: 'var(--text-sub)', fontSize: 14 }}>
                                         <p style={{ marginBottom: 16, lineHeight: 1.6 }}>
-                                            We will securely analyze your profile data and your uploaded resume using advanced AI to provide an ATS score, identify missing skills, and suggest actionable improvements tailored to entry-level / intern roles. 
+                                            We will securely analyze your profile data and your uploaded resume using advanced AI to provide an ATS score, identify missing skills, and suggest actionable improvements tailored to entry-level / intern roles.
                                             This will boost your chances of getting shortlisted.
                                         </p>
-                                        
+
                                         {!profile.resumeUrl ? (
                                             <div className="alert alert-warning" style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 0 }}>
                                                 <AlertCircle size={20} />
                                                 <span>You must upload a resume or provide a valid Google Drive link in your <b>Profile</b> section before using the AI Scanner.</span>
                                             </div>
                                         ) : (
-                                            <button 
+                                            <button
                                                 className="btn btn-primary"
                                                 onClick={() => setEvaluatingStudent(true)}
                                                 style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--purple)', borderColor: 'var(--purple)' }}
@@ -584,149 +616,149 @@ const StudentDashboard = () => {
                             {activeNav === 'profile' && (
                                 <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                                     <div style={{ flex: '1 1 500px', maxWidth: 800 }}>
-                                    <div className="page-header">
-                                        <h1>Professional Profile</h1>
-                                        <p>Information used for job eligibility and recruiter visibility</p>
-                                    </div>
-                                    {isLocked && (
-                                        <div className="locked-banner" style={{ background: '#FFFBE6', border: '1px solid #FFE58F', color: '#856404', padding: '10px 16px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                                            <AlertCircle size={16} />
-                                            <span style={{ fontSize: 12.5, flex: 1 }}>Profile is locked. Request admin edit permission if changes are needed.</span>
-                                            {profile.editRequestStatus === 'None' && <button onClick={requestEditPermission} className="btn btn-sm" style={{ background: '#FAAD14', color: 'white', border: 'none', padding: '4px 10px', height: 'auto' }}>Request Edit</button>}
+                                        <div className="page-header">
+                                            <h1>Professional Profile</h1>
+                                            <p>Information used for job eligibility and recruiter visibility</p>
                                         </div>
-                                    )}
-                                    {profile.status === 'Rejected' && (
-                                        <div className="alert alert-danger" style={{ marginBottom: 20 }}>
-                                            <strong>Profile Rejected:</strong> {profile.rejectionReason}
-                                            <br/>Please make the necessary changes and submit again.
-                                        </div>
-                                    )}
-                                    {profile.status === 'Pending' && (
-                                        <div className="alert alert-warning" style={{ marginBottom: 20 }}>
-                                            Your profile is currently pending admin approval. You cannot make edits at this time.
-                                        </div>
-                                    )}
-                                    {msg.text && <div className={`alert alert-${msg.type}`}><AlertCircle size={16} />{msg.text}</div>}
-                                    <div className="card">
-                                        {/* Simplified Step UI */}
-                                        <div style={{ display: 'flex', gap: 24, marginBottom: 30, borderBottom: '1px solid #F3F4F6' }}>
-                                            {['Personal', 'Education', 'Skills'].map((l, i) => (
-                                                <button key={i} onClick={() => setProfileStep(i+1)} style={{ padding: '0 0 12px 0', background: 'none', border: 'none', borderBottom: profileStep === i+1 ? '2px solid var(--primary)' : '2px solid transparent', color: profileStep === i+1 ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{l}</button>
-                                            ))}
-                                        </div>
-                                        <form onSubmit={handleProfileUpdate}>
-                                            {profileStep === 1 && (
-                                                <div className="grid-2" style={{ gap: 16 }}>
-                                                    <div className="form-group"><label className="form-label">Name</label><input className="form-control" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} disabled={isLocked} /></div>
-                                                    <div className="form-group"><label className="form-label">Phone</label><input className="form-control" maxLength="10" placeholder="e.g. 9876543210" value={profile.contactNumber} onChange={e => setProfile({...profile, contactNumber: e.target.value.replace(/\D/g, '').slice(0, 10)})} disabled={isLocked} /></div>
-                                                    <div className="form-group">
-                                                        <label className="form-label">Gender</label>
-                                                        <select className="form-control" value={profile.gender} onChange={e => setProfile({...profile, gender: e.target.value})} disabled={isLocked}>
-                                                            <option value="">Select Gender</option>
-                                                            {['Male', 'Female', 'Other', 'Prefer not to say'].map(g => <option key={g} value={g}>{g}</option>)}
-                                                        </select>
-                                                    </div>
-                                                    <div className="form-group"><label className="form-label">Date of Birth</label><input type="date" className="form-control" value={profile.dateOfBirth ? profile.dateOfBirth.split('T')[0] : ''} onChange={e => setProfile({...profile, dateOfBirth: e.target.value})} disabled={isLocked} /></div>
-                                                    <div className="form-group"><label className="form-label">City</label><input className="form-control" value={profile.address?.city} onChange={e => setProfile({...profile, address: {...profile.address, city: e.target.value}})} disabled={isLocked} /></div>
-                                                    <div className="form-group"><label className="form-label">State</label><input className="form-control" value={profile.address?.state} onChange={e => setProfile({...profile, address: {...profile.address, state: e.target.value}})} disabled={isLocked} /></div>
-                                                    <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">LinkedIn URL</label><input type="url" className="form-control" value={profile.linkedinUrl} onChange={e => setProfile({...profile, linkedinUrl: e.target.value})} disabled={isLocked} /></div>
-                                                </div>
-                                            )}
-                                            {profileStep === 2 && (
-                                                 <div className="grid-2" style={{ gap: 16 }}>
-                                                     <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">College Name</label><input className="form-control" value={profile.education?.collegeName} onChange={e => setProfile({...profile, education: {...profile.education, collegeName: e.target.value}})} disabled={isLocked} /></div>
-                                                     <div className="form-group"><label className="form-label">Degree</label><select className="form-control" value={profile.education?.degree} onChange={e => setProfile({...profile, education: {...profile.education, degree: e.target.value, branch: e.target.value}})} disabled={isLocked}><option value="">Select...</option><option value="B.Tech (Computer Science)">B.Tech (Computer Science)</option><option value="B.Tech (Information Technology)">B.Tech (Information Technology)</option><option value="B.E. (Computer Science)">B.E. (Computer Science)</option><option value="B.E. (Information Technology)">B.E. (Information Technology)</option><option value="BCA">BCA</option><option value="MCA">MCA</option><option value="B.Sc (Computer Science)">B.Sc (Computer Science)</option><option value="B.Sc (IT)">B.Sc (IT)</option><option value="M.Sc (IT)">M.Sc (IT)</option><option value="Diploma (Computer Engineering)">Diploma (Computer Engineering)</option><option value="Diploma (IT)">Diploma (IT)</option></select></div>
-
-                                                     <div className="form-group">
-                                                        <label className="form-label">Education Status</label>
-                                                        {(() => {
-                                                            const currentYear = new Date().getFullYear();
-                                                            const currentMonth = new Date().getMonth() + 1;
-                                                            const endYear = profile.education?.endYear;
-                                                            const hasPassed = endYear && (endYear < currentYear || (endYear === currentYear && currentMonth > 6));
-                                                            const autoStatus = hasPassed ? 'Completed' : 'Pursuing';
-                                                            return (
-                                                                <>
-                                                                    <div style={{ 
-                                                                        fontWeight: 700, 
-                                                                        fontSize: 14, 
-                                                                        padding: '10px 0',
-                                                                        color: autoStatus === 'Completed' ? '#059669' : '#2563EB' 
-                                                                    }}>
-                                                                        {autoStatus}
-                                                                    </div>
-                                                                    <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: -4 }}>
-                                                                        (Auto-computed based on Passing Year)
-                                                                    </p>
-                                                                </>
-                                                            );
-                                                        })()}
-                                                     </div>
-                                                     <div className="form-group"><label className="form-label">CGPA</label><input className="form-control" type="number" step="0.01" value={profile.education?.cgpa} onChange={e => setProfile({...profile, education: {...profile.education, cgpa: parseFloat(e.target.value)}})} disabled={isLocked} /></div>
-                                                     <div className="form-group"><label className="form-label">Start Year</label><input className="form-control" type="number" placeholder="2023" value={profile.education?.startYear} onChange={e => setProfile({...profile, education: {...profile.education, startYear: parseInt(e.target.value)}})} disabled={isLocked} /></div>
-                                                     <div className="form-group"><label className="form-label">End Year (Passing)</label><input className="form-control" type="number" placeholder="2027" value={profile.education?.endYear} onChange={e => setProfile({...profile, education: {...profile.education, endYear: parseInt(e.target.value)}})} disabled={isLocked} /></div>
-                                                     <div className="form-group"><label className="form-label">10th Percentage</label><input className="form-control" type="number" step="0.1" value={profile.education?.tenthPercentage} onChange={e => setProfile({...profile, education: {...profile.education, tenthPercentage: parseFloat(e.target.value)}})} disabled={isLocked} /></div>
-                                                     <div className="form-group"><label className="form-label">12th Percentage</label><input className="form-control" type="number" step="0.1" value={profile.education?.twelfthPercentage} onChange={e => setProfile({...profile, education: {...profile.education, twelfthPercentage: parseFloat(e.target.value)}})} disabled={isLocked} /></div>
-                                                 </div>
-                                             )}
-                                            {profileStep === 3 && (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                                    <div className="form-group"><label className="form-label">Technical Skills (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.technical?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, technical: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="React, Node.js, MongoDB..." /></div>
-                                                    <div className="form-group"><label className="form-label">Soft Skills (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.soft?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, soft: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="Leadership, Communication..." /></div>
-                                                    <div className="form-group"><label className="form-label">Tools (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.tools?.join(', ')} onChange={e => setProfile({...profile, skills: {...profile.skills, tools: e.target.value.split(',').map(s => s.trim())}})} disabled={isLocked} placeholder="VS Code, Docker, Postman..." /></div>
-                                                    <div>
-                                                        <label className="form-label">Resume (URL or Local File)</label>
-                                                        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-                                                            <input type="url" className="form-control" style={{ flex: 1 }} value={profile.resumeUrl} onChange={e => setProfile({...profile, resumeUrl: e.target.value})} disabled={isLocked} placeholder="Paste link or click Upload ->" />
-                                                            <label className="btn btn-outline" style={{ cursor: isLocked ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', margin: 0, padding: '0 12px', fontSize: 13 }}>
-                                                                Upload PDF
-                                                                <input 
-                                                                    type="file" 
-                                                                    accept=".pdf,.doc,.docx" 
-                                                                    style={{ display: 'none' }} 
-                                                                    disabled={isLocked}
-                                                                    onChange={async (e) => {
-                                                                        if (!e.target.files[0]) return;
-                                                                        const fd = new FormData();
-                                                                        fd.append('resume', e.target.files[0]);
-                                                                        try {
-                                                                            const { data } = await api.post('/student/upload-resume', fd, { headers: { 'Content-Type': 'multipart/form-data' }});
-                                                                            setProfile({...profile, resumeUrl: data.url});
-                                                                            setMsg({ type: 'success', text: 'Resume file uploaded successfully!' });
-                                                                        } catch(err) {
-                                                                            setMsg({ type: 'error', text: 'Failed to upload resume file' });
-                                                                        }
-                                                                    }} 
-                                                                />
-                                                            </label>
-                                                        </div>
-                                                        {profile.resumeUrl && profile.resumeUrl.trim().startsWith('file:///') && (
-                                                            <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 4 }}>⚠️ Error: You pasted a local path. Click "Upload PDF" instead!</div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <div style={{ marginTop: 30, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                                                {profileStep > 1 && <button type="button" onClick={() => setProfileStep(s => s-1)} className="btn btn-outline">Back</button>}
-                                                {profileStep < 3 ? <button type="button" onClick={() => setProfileStep(s => s+1)} className="btn btn-primary">Next</button> : 
-                                                    <>
-                                                        <button type="submit" className="btn btn-outline" disabled={isLocked || profile.status === 'Pending'}>Save Draft</button>
-                                                        <button type="button" onClick={handleSubmitForApproval} className="btn btn-primary" disabled={isLocked || profile.status === 'Pending'}>Submit for Approval</button>
-                                                    </>
-                                                }
+                                        {isLocked && (
+                                            <div className="locked-banner" style={{ background: '#FFFBE6', border: '1px solid #FFE58F', color: '#856404', padding: '10px 16px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                                                <AlertCircle size={16} />
+                                                <span style={{ fontSize: 12.5, flex: 1 }}>Profile is locked. Request admin edit permission if changes are needed.</span>
+                                                {profile.editRequestStatus === 'None' && <button onClick={requestEditPermission} className="btn btn-sm" style={{ background: '#FAAD14', color: 'white', border: 'none', padding: '4px 10px', height: 'auto' }}>Request Edit</button>}
                                             </div>
-                                        </form>
+                                        )}
+                                        {profile.status === 'Rejected' && (
+                                            <div className="alert alert-danger" style={{ marginBottom: 20 }}>
+                                                <strong>Profile Rejected:</strong> {profile.rejectionReason}
+                                                <br />Please make the necessary changes and submit again.
+                                            </div>
+                                        )}
+                                        {profile.status === 'Pending' && (
+                                            <div className="alert alert-warning" style={{ marginBottom: 20 }}>
+                                                Your profile is currently pending admin approval. You cannot make edits at this time.
+                                            </div>
+                                        )}
+                                        {msg.text && <div className={`alert alert-${msg.type}`}><AlertCircle size={16} />{msg.text}</div>}
+                                        <div className="card">
+                                            {/* Simplified Step UI */}
+                                            <div style={{ display: 'flex', gap: 24, marginBottom: 30, borderBottom: '1px solid #F3F4F6' }}>
+                                                {['Personal', 'Education', 'Skills'].map((l, i) => (
+                                                    <button key={i} onClick={() => setProfileStep(i + 1)} style={{ padding: '0 0 12px 0', background: 'none', border: 'none', borderBottom: profileStep === i + 1 ? '2px solid var(--primary)' : '2px solid transparent', color: profileStep === i + 1 ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>{l}</button>
+                                                ))}
+                                            </div>
+                                            <form onSubmit={handleProfileUpdate}>
+                                                {profileStep === 1 && (
+                                                    <div className="grid-2" style={{ gap: 16 }}>
+                                                        <div className="form-group"><label className="form-label">Name</label><input className="form-control" value={profile.name} onChange={e => setProfile({ ...profile, name: e.target.value })} disabled={isLocked} /></div>
+                                                        <div className="form-group"><label className="form-label">Phone</label><input className="form-control" maxLength="10" placeholder="e.g. 9876543210" value={profile.contactNumber} onChange={e => setProfile({ ...profile, contactNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })} disabled={isLocked} /></div>
+                                                        <div className="form-group">
+                                                            <label className="form-label">Gender</label>
+                                                            <select className="form-control" value={profile.gender} onChange={e => setProfile({ ...profile, gender: e.target.value })} disabled={isLocked}>
+                                                                <option value="">Select Gender</option>
+                                                                {['Male', 'Female'].map(g => <option key={g} value={g}>{g}</option>)}
+                                                            </select>
+                                                        </div>
+                                                        <div className="form-group"><label className="form-label">Date of Birth</label><input type="date" className="form-control" value={profile.dateOfBirth ? profile.dateOfBirth.split('T')[0] : ''} onChange={e => setProfile({ ...profile, dateOfBirth: e.target.value })} disabled={isLocked} max={getMaxDobDate()} /></div>
+                                                        <div className="form-group"><label className="form-label">City</label><input className="form-control" value={profile.address?.city} onChange={e => setProfile({ ...profile, address: { ...profile.address, city: e.target.value } })} disabled={isLocked} /></div>
+                                                        <div className="form-group"><label className="form-label">State</label><input className="form-control" value={profile.address?.state} onChange={e => setProfile({ ...profile, address: { ...profile.address, state: e.target.value } })} disabled={isLocked} /></div>
+                                                        <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">LinkedIn URL</label><input type="url" className="form-control" value={profile.linkedinUrl} onChange={e => setProfile({ ...profile, linkedinUrl: e.target.value })} disabled={isLocked} /></div>
+                                                    </div>
+                                                )}
+                                                {profileStep === 2 && (
+                                                    <div className="grid-2" style={{ gap: 16 }}>
+                                                        <div className="form-group" style={{ gridColumn: 'span 2' }}><label className="form-label">College Name</label><input className="form-control" value={profile.education?.collegeName} onChange={e => setProfile({ ...profile, education: { ...profile.education, collegeName: e.target.value } })} disabled={isLocked} /></div>
+                                                        <div className="form-group"><label className="form-label">Degree</label><select className="form-control" value={profile.education?.degree} onChange={e => setProfile({ ...profile, education: { ...profile.education, degree: e.target.value, branch: e.target.value } })} disabled={isLocked}><option value="">Select...</option><option value="B.Tech (Computer Science)">B.Tech (Computer Science)</option><option value="B.Tech (Information Technology)">B.Tech (Information Technology)</option><option value="BCA">BCA</option><option value="MCA">MCA</option><option value="B.Sc (Computer Science)">B.Sc (Computer Science)</option><option value="B.Sc (IT)">B.Sc (IT)</option><option value="M.Sc (IT)">M.Sc (IT)</option><option value="Diploma (Computer Engineering)">Diploma (Computer Engineering)</option><option value="Diploma (IT)">Diploma (IT)</option></select></div>
+
+                                                        <div className="form-group">
+                                                            <label className="form-label">Education Status</label>
+                                                            {(() => {
+                                                                const currentYear = new Date().getFullYear();
+                                                                const currentMonth = new Date().getMonth() + 1;
+                                                                const endYear = profile.education?.endYear;
+                                                                const hasPassed = endYear && (endYear < currentYear || (endYear === currentYear && currentMonth > 6));
+                                                                const autoStatus = hasPassed ? 'Completed' : 'Pursuing';
+                                                                return (
+                                                                    <>
+                                                                        <div style={{
+                                                                            fontWeight: 700,
+                                                                            fontSize: 14,
+                                                                            padding: '10px 0',
+                                                                            color: autoStatus === 'Completed' ? '#059669' : '#2563EB'
+                                                                        }}>
+                                                                            {autoStatus}
+                                                                        </div>
+                                                                        <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: -4 }}>
+                                                                            (Auto-computed based on Passing Year)
+                                                                        </p>
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                        <div className="form-group"><label className="form-label">CGPA</label><input className="form-control" type="number" step="0.01" value={profile.education?.cgpa} onChange={e => setProfile({ ...profile, education: { ...profile.education, cgpa: parseFloat(e.target.value) } })} disabled={isLocked} /></div>
+                                                        <div className="form-group"><label className="form-label">Start Year</label><input className="form-control" type="number" placeholder="2023" value={profile.education?.startYear} onChange={e => setProfile({ ...profile, education: { ...profile.education, startYear: parseInt(e.target.value) } })} disabled={isLocked} /></div>
+                                                        <div className="form-group"><label className="form-label">End Year (Passing)</label><input className="form-control" type="number" placeholder="2027" value={profile.education?.endYear} onChange={e => setProfile({ ...profile, education: { ...profile.education, endYear: parseInt(e.target.value) } })} disabled={isLocked} /></div>
+                                                        <div className="form-group"><label className="form-label">10th Percentage</label><input className="form-control" type="number" step="0.1" value={profile.education?.tenthPercentage} onChange={e => setProfile({ ...profile, education: { ...profile.education, tenthPercentage: parseFloat(e.target.value) } })} disabled={isLocked} /></div>
+                                                        <div className="form-group"><label className="form-label">12th Percentage</label><input className="form-control" type="number" step="0.1" value={profile.education?.twelfthPercentage} onChange={e => setProfile({ ...profile, education: { ...profile.education, twelfthPercentage: parseFloat(e.target.value) } })} disabled={isLocked} /></div>
+                                                    </div>
+                                                )}
+                                                {profileStep === 3 && (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                                        <div className="form-group"><label className="form-label">Technical Skills (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.technical?.join(', ')} onChange={e => setProfile({ ...profile, skills: { ...profile.skills, technical: e.target.value.split(',').map(s => s.trim()) } })} disabled={isLocked} placeholder="React, Node.js, MongoDB..." /></div>
+                                                        <div className="form-group"><label className="form-label">Soft Skills (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.soft?.join(', ')} onChange={e => setProfile({ ...profile, skills: { ...profile.skills, soft: e.target.value.split(',').map(s => s.trim()) } })} disabled={isLocked} placeholder="Leadership, Communication..." /></div>
+                                                        <div className="form-group"><label className="form-label">Tools (CSV)</label><textarea className="form-textarea" rows={2} value={profile.skills?.tools?.join(', ')} onChange={e => setProfile({ ...profile, skills: { ...profile.skills, tools: e.target.value.split(',').map(s => s.trim()) } })} disabled={isLocked} placeholder="VS Code, Docker, Postman..." /></div>
+                                                        <div>
+                                                            <label className="form-label">Resume (URL or Local File)</label>
+                                                            <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                                                                <input type="url" className="form-control" style={{ flex: 1 }} value={profile.resumeUrl} onChange={e => setProfile({ ...profile, resumeUrl: e.target.value })} disabled={isLocked} placeholder="Paste link or click Upload ->" />
+                                                                <label className="btn btn-outline" style={{ cursor: isLocked ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', margin: 0, padding: '0 12px', fontSize: 13 }}>
+                                                                    Upload PDF
+                                                                    <input
+                                                                        type="file"
+                                                                        accept=".pdf,.doc,.docx"
+                                                                        style={{ display: 'none' }}
+                                                                        disabled={isLocked}
+                                                                        onChange={async (e) => {
+                                                                            if (!e.target.files[0]) return;
+                                                                            const fd = new FormData();
+                                                                            fd.append('resume', e.target.files[0]);
+                                                                            try {
+                                                                                const { data } = await api.post('/student/upload-resume', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                                                                                setProfile({ ...profile, resumeUrl: data.url });
+                                                                                setMsg({ type: 'success', text: 'Resume file uploaded successfully!' });
+                                                                            } catch (err) {
+                                                                                setMsg({ type: 'error', text: 'Failed to upload resume file' });
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </label>
+                                                            </div>
+                                                            {profile.resumeUrl && profile.resumeUrl.trim().startsWith('file:///') && (
+                                                                <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 4 }}>⚠️ Error: You pasted a local path. Click "Upload PDF" instead!</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div style={{ marginTop: 30, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+                                                    {profileStep > 1 && <button type="button" onClick={() => setProfileStep(s => s - 1)} className="btn btn-outline">Back</button>}
+                                                    {profileStep < 3 ? <button type="button" onClick={() => setProfileStep(s => s + 1)} className="btn btn-primary">Next</button> :
+                                                        <>
+                                                            <button type="submit" className="btn btn-outline" disabled={isLocked || profile.status === 'Pending'}>Save Draft</button>
+                                                            <button type="button" onClick={handleSubmitForApproval} className="btn btn-primary" disabled={isLocked || profile.status === 'Pending'}>Submit for Approval</button>
+                                                        </>
+                                                    }
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: '0 0 320px' }}>
+                                        <div className="card">
+                                            <div className="card-title" style={{ marginBottom: 16 }}>Change Password</div>
+                                            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Send reset link to your registered email.</p>
+                                            <button onClick={handlePasswordReset} className="btn btn-primary btn-full">Send Reset Link</button>
+                                            {passMsg && <div className="alert alert-success" style={{ marginTop: 16 }}>{passMsg}</div>}
+                                        </div>
                                     </div>
                                 </div>
-                                <div style={{ flex: '0 0 320px' }}>
-                                    <div className="card">
-                                        <div className="card-title" style={{ marginBottom: 16 }}>Change Password</div>
-                                        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>Send reset link to your registered email.</p>
-                                        <button onClick={handlePasswordReset} className="btn btn-primary btn-full">Send Reset Link</button>
-                                        {passMsg && <div className="alert alert-success" style={{ marginTop: 16 }}>{passMsg}</div>}
-                                    </div>
-                                </div>
-                            </div>
                             )}
 
                         </div>
@@ -735,9 +767,9 @@ const StudentDashboard = () => {
             </div>
 
             {evaluatingStudent && (
-                <ATSEvaluationModal 
-                    student={profile} 
-                    onClose={() => setEvaluatingStudent(false)} 
+                <ATSEvaluationModal
+                    student={profile}
+                    onClose={() => setEvaluatingStudent(false)}
                 />
             )}
         </div>

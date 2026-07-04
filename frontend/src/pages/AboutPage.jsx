@@ -216,36 +216,7 @@ const AboutPage = () => {
       </section>
 
       {/* Flow Diagram */}
-      <section style={{ ...sectionStyle, borderTop: '1px solid rgba(0,0,0,0.05)', borderBottom: '1px solid rgba(0,0,0,0.05)', background: '#ffffff' }}>
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: '#1e293b' }}>End-to-End Pipeline</h2>
-        </div>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, maxWidth: 600, margin: '0 auto' }}>
-          {[
-            { text: 'Student & Company Register', color: '#64748b', bg: '#f8fafc' },
-            { text: 'Admin Reviews & Approves Users', color: '#D97706', bg: '#fffbeb' },
-            { text: 'Company Posts Job → Admin Approves Job', color: '#059669', bg: '#ecfdf5' },
-            { text: 'Student Applies to Live Jobs', color: '#4F46E5', bg: '#eef2ff' },
-            { text: 'Company Reviews → Updates Status', color: '#059669', bg: '#ecfdf5' },
-            { text: 'Student Gets Placed 🎉', color: '#4F46E5', bg: '#eef2ff', isLast: true }
-          ].map((item, i) => (
-            <React.Fragment key={i}>
-              <div style={{ 
-                background: item.bg, 
-                border: `1px solid ${item.color}40`,
-                padding: '16px 24px', borderRadius: 12,
-                width: '100%', textAlign: 'center',
-                fontWeight: 700, fontSize: 14, color: item.color,
-                boxShadow: `0 4px 14px -5px ${item.color}20`
-              }}>
-                {item.text}
-              </div>
-              {!item.isLast && <div style={{ height: 24, width: 2, background: 'rgba(0,0,0,0.1)' }}></div>}
-            </React.Fragment>
-          ))}
-        </div>
-      </section>
+      
 
       {/* Features Section */}
       <section style={sectionStyle}>

@@ -849,11 +849,7 @@ function RegisterPanel({ step, dir, data, onChange, setData, onNext, onPrev, onS
                 className="w-full h-11 px-4 text-sm font-medium rounded-xl border border-slate-200 bg-white outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
                 style={{ fontFamily: 'Inter, sans-serif', color: '#0f172a', boxSizing: 'border-box' }} />
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
-              By creating an account you agree to our{' '}
-              <span className="text-indigo-600 font-semibold cursor-pointer hover:underline">Terms of Service</span>{' '}and{' '}
-              <span className="text-indigo-600 font-semibold cursor-pointer hover:underline">Privacy Policy</span>.
-            </p>
+            
             <div className="flex gap-3">
               <OutlineBtn onClick={onPrev}><ArrowLeft size={15} /> Back</OutlineBtn>
               <div className="flex-1">
